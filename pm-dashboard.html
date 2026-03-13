@@ -1,0 +1,2381 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PM Dashboard — S.T.Bakery</title>
+<link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&family=IBM+Plex+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+<!-- ===== FIREBASE CONFIG — ใส่ค่าจาก Firebase Console ที่นี่ ===== -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script>
+const FIREBASE_CONFIG = {
+  apiKey:            "AIzaSyBdtgWABVXKLnheTjYl2RA5mR7RjUNFfkI",
+  authDomain:        "st-bakery-stock.firebaseapp.com",
+  projectId:         "st-bakery-stock",
+  storageBucket:     "st-bakery-stock.firebasestorage.app",
+  messagingSenderId: "586761849890",
+  appId:             "1:586761849890:web:c8c5b7e7632bf958c68e7b"
+};
+// ============================================================
+</script>
+<style>
+:root {
+  --bg:#0f1117;--surface:#181c27;--surface2:#1e2336;--border:#2a3050;
+  --text:#e8eaf0;--text-dim:#6b7494;--text-mid:#9ba3c2;
+  --red:#ff4757;--red-bg:rgba(255,71,87,0.12);
+  --yellow:#ffa502;--yellow-bg:rgba(255,165,2,0.12);
+  --green:#2ed573;--green-bg:rgba(46,213,115,0.10);
+  --blue:#1e90ff;--blue-bg:rgba(30,144,255,0.10);
+  --accent:#5c7cfa;
+}
+body.light-mode {
+  --bg:#f4f6fb;--surface:#ffffff;--surface2:#eef0f8;--border:#d0d5e8;
+  --text:#1a1d2e;--text-dim:#8890b0;--text-mid:#4a5280;
+  --red:#e03040;--red-bg:rgba(224,48,64,0.08);
+  --yellow:#d4860a;--yellow-bg:rgba(212,134,10,0.10);
+  --green:#1a9e50;--green-bg:rgba(26,158,80,0.08);
+  --blue:#1565c0;--blue-bg:rgba(21,101,192,0.08);
+  --accent:#4361ee;
+}
+body.light-mode::before{opacity:0.015;}
+
+/* THEME TOGGLE */
+.theme-toggle{background:var(--surface2);border:1px solid var(--border);color:var(--text-mid);padding:7px 13px;border-radius:20px;font-size:13px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;transition:all 0.2s;display:flex;align-items:center;gap:6px;white-space:nowrap;}
+.theme-toggle:hover{border-color:var(--accent);color:var(--accent);}
+*{margin:0;padding:0;box-sizing:border-box;}
+body{background:var(--bg);color:var(--text);font-family:'Sarabun',sans-serif;font-size:15px;min-height:100vh;}
+body::before{content:'';position:fixed;inset:0;background-image:url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");pointer-events:none;z-index:0;}
+.wrap{position:relative;z-index:1;max-width:1380px;margin:0 auto;padding:0 24px;}
+
+/* TOPBAR */
+.topbar{background:var(--surface);border-bottom:1px solid var(--border);padding:0 24px;display:flex;align-items:center;justify-content:space-between;height:64px;position:sticky;top:0;z-index:200;backdrop-filter:blur(12px);}
+.topbar-left{display:flex;align-items:center;gap:14px;}
+.logo-icon{width:38px;height:38px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:20px;}
+.logo-text{font-weight:800;font-size:22px;letter-spacing:0.4px;}
+.topbar-right{display:flex;align-items:center;gap:10px;}
+.company-badge{background:linear-gradient(135deg,#5c7cfa,#845ef7);padding:6px 14px;border-radius:20px;font-size:13px;font-weight:700;color:#fff;letter-spacing:0.5px;}
+.tag-today{background:var(--surface2);border:1px solid var(--border);padding:5px 12px;border-radius:20px;font-size:12px;color:var(--text-mid);font-family:'IBM Plex Mono',monospace;}
+.btn-line{background:#06C755;color:#fff;border:none;padding:8px 14px;border-radius:8px;font-size:13px;font-family:'Sarabun',sans-serif;font-weight:600;cursor:pointer;display:flex;align-items:center;gap:6px;transition:opacity 0.2s;}
+.btn-line:hover{opacity:0.85;}
+
+/* PAGE NAV */
+.page-nav{background:var(--surface);border-bottom:1px solid var(--border);display:flex;gap:0;padding:0 24px;}
+.nav-tab{padding:12px 20px;font-size:14px;color:var(--text-dim);cursor:pointer;border-bottom:2px solid transparent;transition:all 0.15s;user-select:none;font-weight:500;white-space:nowrap;}
+.nav-tab:hover{color:var(--text-mid);}
+.nav-tab.active{color:var(--accent);border-bottom-color:var(--accent);}
+
+/* PAGES */
+.page{display:none;}.page.active{display:block;}
+
+.section{padding:24px 0;}
+.section-title{font-size:11px;font-weight:600;letter-spacing:2px;text-transform:uppercase;color:var(--text-dim);margin-bottom:16px;font-family:'IBM Plex Mono',monospace;}
+
+/* SUMMARY */
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;}
+.sum-card{background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:20px;position:relative;overflow:hidden;}
+.sum-card::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;}
+.sum-card.red::before{background:var(--red);}.sum-card.yellow::before{background:var(--yellow);}
+.sum-card.green::before{background:var(--green);}.sum-card.blue::before{background:var(--accent);}
+.sum-num{font-size:38px;font-weight:700;line-height:1;font-family:'IBM Plex Mono',monospace;}
+.sum-card.red .sum-num{color:var(--red);}.sum-card.yellow .sum-num{color:var(--yellow);}
+.sum-card.green .sum-num{color:var(--green);}.sum-card.blue .sum-num{color:var(--accent);}
+.sum-label{font-size:13px;color:var(--text-mid);margin-top:6px;}
+
+/* BANNER */
+.banner{background:linear-gradient(135deg,#06C755 0%,#0a9e45 100%);border-radius:12px;padding:16px 20px;display:flex;align-items:center;gap:14px;color:#fff;font-size:14px;}
+.banner-icon{font-size:24px;flex-shrink:0;}
+.banner-text{flex:1;line-height:1.5;}
+.banner-text strong{font-size:15px;}
+.banner-link{background:rgba(255,255,255,0.2);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:7px 14px;border-radius:7px;font-size:12px;font-weight:600;white-space:nowrap;cursor:pointer;}
+
+/* MACHINE */
+.machine-block{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:16px;}
+.machine-header{padding:14px 20px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;cursor:pointer;user-select:none;}
+.machine-icon{width:32px;height:32px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0;}
+.machine-name{font-weight:600;font-size:15px;flex:1;}
+.machine-count{font-size:12px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;}
+.chevron{color:var(--text-dim);font-size:12px;transition:transform 0.2s;}
+.machine-header.open .chevron{transform:rotate(90deg);}
+.machine-body{display:none;}.machine-body.open{display:block;}
+
+/* TABLE */
+.pm-table{width:100%;border-collapse:collapse;}
+.pm-table th{padding:10px 14px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);font-weight:600;border-bottom:1px solid var(--border);background:var(--bg);font-family:'IBM Plex Mono',monospace;}
+.pm-table td{padding:12px 14px;border-bottom:1px solid var(--border);font-size:14px;vertical-align:middle;}
+.pm-table tr:last-child td{border-bottom:none;}
+.pm-table tr:hover td{background:rgba(255,255,255,0.02);}
+
+/* BADGES */
+.badge{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;border-radius:20px;font-size:12px;font-weight:600;white-space:nowrap;}
+.badge-red{background:var(--red-bg);color:var(--red);}.badge-yellow{background:var(--yellow-bg);color:var(--yellow);}.badge-green{background:var(--green-bg);color:var(--green);}
+.dot{width:6px;height:6px;border-radius:50%;}
+.dot-red{background:var(--red);animation:pulse-red 1.4s infinite;}.dot-yellow{background:var(--yellow);}.dot-green{background:var(--green);}
+@keyframes pulse-red{0%,100%{opacity:1;transform:scale(1)}50%{opacity:0.5;transform:scale(1.3)}}
+
+.freq-chip{display:inline-block;padding:2px 8px;border-radius:4px;font-size:11px;background:var(--surface2);color:var(--text-mid);border:1px solid var(--border);font-family:'IBM Plex Mono',monospace;}
+
+.progress-wrap{width:80px;}
+.progress-bar{height:4px;background:var(--border);border-radius:2px;overflow:hidden;}
+.progress-fill{height:100%;border-radius:2px;}
+.progress-label{font-size:10px;color:var(--text-dim);margin-top:3px;font-family:'IBM Plex Mono',monospace;}
+
+/* ACTION */
+.action-cell{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.btn-done{background:var(--surface2);border:1px solid var(--border);color:var(--text-mid);padding:6px 11px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.2s;white-space:nowrap;}
+.btn-done:hover{background:var(--green-bg);border-color:var(--green);color:var(--green);}
+.btn-done.done{background:var(--green-bg);border-color:var(--green);color:var(--green);}
+.date-input{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:5px 8px;border-radius:6px;font-size:12px;font-family:'Sarabun',sans-serif;cursor:pointer;width:130px;}
+.date-input:focus{outline:none;border-color:var(--accent);}
+
+/* CALENDAR */
+.cal-row{display:grid;grid-template-columns:repeat(12,1fr);gap:3px;margin-top:8px;}
+.cal-month{background:var(--surface2);border:1px solid var(--border);border-radius:4px;padding:4px 2px;text-align:center;font-size:10px;color:var(--text-dim);font-family:'IBM Plex Mono',monospace;}
+.cal-month.has-pm{background:var(--blue-bg);border-color:var(--accent);color:var(--accent);font-weight:600;}
+.cal-month.overdue-m{background:var(--red-bg);border-color:var(--red);color:var(--red);}
+.cal-month.current{background:var(--accent);color:#fff;border-color:var(--accent);}
+
+/* SEARCH */
+.search-bar{display:flex;gap:10px;align-items:center;margin-bottom:16px;}
+.search-input{flex:1;background:var(--surface);border:1px solid var(--border);color:var(--text);padding:10px 16px;border-radius:10px;font-size:14px;font-family:'Sarabun',sans-serif;}
+.search-input:focus{outline:none;border-color:var(--accent);}
+.search-input::placeholder{color:var(--text-dim);}
+
+/* FILTERS */
+.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.filter-btn{background:var(--surface);border:1px solid var(--border);color:var(--text-mid);padding:6px 14px;border-radius:20px;font-size:12px;cursor:pointer;font-family:'Sarabun',sans-serif;transition:all 0.15s;}
+.filter-btn:hover,.filter-btn.active{background:var(--accent);border-color:var(--accent);color:#fff;}
+
+/* FORMS */
+.form-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:28px;margin-bottom:24px;}
+.form-title{font-size:17px;font-weight:700;margin-bottom:20px;}
+.form-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;}
+.form-grid-2{display:grid;grid-template-columns:repeat(2,1fr);gap:16px;}
+.form-group{display:flex;flex-direction:column;gap:6px;}
+.form-group label{font-size:12px;color:var(--text-dim);font-weight:600;letter-spacing:0.5px;text-transform:uppercase;}
+.form-control{background:var(--surface2);border:1px solid var(--border);color:var(--text);padding:10px 14px;border-radius:8px;font-size:14px;font-family:'Sarabun',sans-serif;}
+.form-control:focus{outline:none;border-color:var(--accent);}
+select.form-control option{background:var(--surface2);}
+.btn-primary{background:var(--accent);color:#fff;border:none;padding:11px 22px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;transition:opacity 0.2s;}
+.btn-primary:hover{opacity:0.85;}
+.btn-secondary{background:var(--surface2);color:var(--text-mid);border:1px solid var(--border);padding:11px 22px;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;font-family:'Sarabun',sans-serif;}
+.btn-secondary:hover{border-color:var(--accent);color:var(--accent);}
+.btn-danger{background:var(--red-bg);color:var(--red);border:1px solid var(--red);padding:5px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-family:'Sarabun',sans-serif;}
+
+/* UPLOAD */
+.upload-zone{border:2px dashed var(--border);border-radius:12px;padding:36px;text-align:center;cursor:pointer;transition:all 0.2s;}
+.upload-zone:hover,.upload-zone.drag{border-color:var(--accent);background:var(--blue-bg);}
+.upload-zone-icon{font-size:36px;margin-bottom:10px;}
+.upload-zone-text{color:var(--text-mid);font-size:14px;}
+.upload-zone-sub{color:var(--text-dim);font-size:12px;margin-top:4px;}
+
+/* LIST TABLE */
+.list-table{width:100%;border-collapse:collapse;}
+.list-table th{padding:10px 14px;text-align:left;font-size:11px;letter-spacing:1px;text-transform:uppercase;color:var(--text-dim);font-weight:600;border-bottom:1px solid var(--border);background:var(--bg);font-family:'IBM Plex Mono',monospace;}
+.list-table td{padding:11px 14px;border-bottom:1px solid var(--border);font-size:14px;vertical-align:middle;}
+.list-table tr:hover td{background:rgba(255,255,255,0.02);}
+
+/* REPORT */
+.report-card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;margin-bottom:24px;}
+.report-header{padding:18px 22px;background:var(--surface2);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;}
+.report-title{font-size:16px;font-weight:700;}
+
+/* EXPORT */
+.export-row{display:flex;gap:10px;flex-wrap:wrap;}
+.btn-export{background:var(--surface2);border:1px solid var(--border);color:var(--text-mid);padding:9px 16px;border-radius:8px;font-size:13px;cursor:pointer;font-family:'Sarabun',sans-serif;font-weight:600;transition:all 0.2s;display:flex;align-items:center;gap:6px;}
+.btn-export:hover{border-color:var(--accent);color:var(--accent);}
+
+/* MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:500;display:none;align-items:center;justify-content:center;backdrop-filter:blur(4px);}
+.modal-overlay.open{display:flex;}
+.modal-box{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:28px;max-width:520px;width:90%;max-height:90vh;overflow-y:auto;}
+.modal-box.wide{max-width:680px;}
+.modal-title{font-size:17px;font-weight:700;margin-bottom:16px;}
+.modal-body{white-space:pre-wrap;font-family:'IBM Plex Mono',monospace;font-size:12px;line-height:1.7;color:var(--text-mid);background:var(--bg);padding:16px;border-radius:8px;max-height:400px;overflow-y:auto;}
+.modal-footer{display:flex;gap:10px;margin-top:16px;justify-content:flex-end;}
+
+/* TOAST */
+.toast{position:fixed;bottom:24px;right:24px;background:var(--green);color:#0a2a0a;padding:12px 20px;border-radius:10px;font-weight:600;font-size:14px;z-index:999;transform:translateY(100px);opacity:0;transition:all 0.3s;pointer-events:none;}
+.toast.show{transform:translateY(0);opacity:1;}
+
+/* WORK ORDER PRINT STYLES */
+.wo-preview{display:none;}
+
+@media print{
+  body{background:#fff!important;color:#000!important;font-family:'Sarabun',sans-serif;}
+  body::before{display:none!important;}
+  .topbar,.page-nav,.filters,.search-bar,.export-row,.btn-done,.btn-export,.btn-primary,.btn-secondary,.modal-overlay,.toast,.banner,.no-print{display:none!important;}
+  .page,.page.active{display:none!important;}
+  .wo-preview{display:block!important;}
+
+  /* WORK ORDER PAPER */
+  .wo-paper{
+    background:#fff;color:#000;
+    max-width:210mm;margin:0 auto;
+    padding:14mm 16mm 12mm;
+    font-family:'Sarabun',sans-serif;
+    font-size:13px;line-height:1.5;
+  }
+  .wo-header-grid{display:grid;grid-template-columns:1fr auto;gap:12px;align-items:start;border-bottom:3px solid #1a1a2e;padding-bottom:12px;margin-bottom:14px;}
+  .wo-company-name{font-size:22px;font-weight:800;color:#1a1a2e;letter-spacing:0.5px;}
+  .wo-company-sub{font-size:12px;color:#555;margin-top:2px;}
+  .wo-doc-box{border:2px solid #1a1a2e;border-radius:6px;padding:8px 14px;text-align:right;min-width:180px;}
+  .wo-doc-title{font-size:16px;font-weight:800;color:#1a1a2e;}
+  .wo-doc-num{font-size:11px;color:#555;font-family:'IBM Plex Mono',monospace;margin-top:3px;}
+  .wo-doc-date{font-size:11px;color:#555;font-family:'IBM Plex Mono',monospace;}
+
+  .wo-meta-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:0;border:1px solid #bbb;border-radius:6px;overflow:hidden;margin-bottom:14px;}
+  .wo-meta-cell{padding:7px 12px;border-right:1px solid #bbb;}
+  .wo-meta-cell:last-child{border-right:none;}
+  .wo-meta-label{font-size:10px;color:#777;font-weight:700;text-transform:uppercase;letter-spacing:0.5px;}
+  .wo-meta-value{font-size:13px;font-weight:600;color:#000;margin-top:2px;}
+
+  .wo-section-title{font-size:13px;font-weight:700;color:#1a1a2e;padding:7px 12px;background:#f0f2ff;border:1px solid #c5cbf5;border-radius:4px;margin-bottom:8px;margin-top:14px;}
+
+  .wo-table{width:100%;border-collapse:collapse;font-size:12px;}
+  .wo-table th{background:#1a1a2e;color:#fff;padding:8px 10px;text-align:left;font-size:11px;font-weight:700;}
+  .wo-table td{padding:8px 10px;border-bottom:1px solid #ddd;vertical-align:top;}
+  .wo-table tr:nth-child(even) td{background:#f8f8ff;}
+  .wo-status-chip{display:inline-block;padding:2px 8px;border-radius:3px;font-size:10px;font-weight:700;}
+  .wo-chip-red{background:#ffeef0;color:#c00;border:1px solid #f5c0c5;}
+  .wo-chip-yellow{background:#fff8e6;color:#8a5000;border:1px solid #f5dfa0;}
+  .wo-chip-ok{background:#e8fff3;color:#006622;border:1px solid #a0e0b8;}
+
+  .wo-result-row td{background:#fffbe6!important;border-bottom:1px solid #e0d080;}
+  .wo-result-box{border:1px dashed #bbb;border-radius:3px;min-height:28px;padding:4px 6px;font-size:11px;color:#888;}
+
+  .wo-sign-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-top:20px;padding-top:16px;border-top:2px solid #eee;}
+  .wo-sign-box{text-align:center;}
+  .wo-sign-label{font-size:11px;color:#777;margin-bottom:4px;}
+  .wo-sign-line{border-bottom:1.5px solid #333;margin:28px 10px 4px;}
+  .wo-sign-name{font-size:11px;color:#555;}
+  .wo-sign-date{font-size:11px;color:#888;border:1px solid #ccc;border-radius:3px;padding:2px 8px;display:inline-block;margin-top:4px;min-width:100px;}
+
+  .wo-footer{margin-top:14px;padding-top:8px;border-top:1px solid #ddd;display:flex;justify-content:space-between;font-size:10px;color:#aaa;}
+
+  .wo-note-box{border:1px solid #ddd;border-radius:4px;padding:8px 12px;min-height:44px;margin-top:8px;font-size:12px;color:#555;}
+  .wo-note-label{font-size:11px;color:#777;font-weight:700;margin-bottom:4px;}
+
+  @page{size:A4;margin:0;}
+}
+@media(max-width:768px){
+  /* ===== TOPBAR ===== */
+  .topbar { padding:0 12px; height:52px; }
+  .logo-text { font-size:16px; }
+  .logo-icon { width:32px; height:32px; font-size:16px; }
+  .company-badge { display:none; }
+  .tag-today { display:none; }
+  .theme-toggle { display:none; }
+  .btn-line { display:none; }
+  #syncStatus { font-size:11px; padding:4px 8px; }
+  #syncText { display:none; }
+
+  /* ===== NAV ===== */
+  .page-nav {
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    padding:0 4px;
+    gap:0;
+    scrollbar-width:none;
+  }
+  .page-nav::-webkit-scrollbar { display:none; }
+  .nav-tab { font-size:11px; padding:10px 12px; white-space:nowrap; }
+
+  /* ===== WRAP / SECTION ===== */
+  .wrap { padding:0 12px; }
+  .section { padding:16px 0; }
+
+  /* ===== SUMMARY CARDS ===== */
+  .summary-grid { grid-template-columns:repeat(2,1fr); gap:10px; }
+  .sum-card { padding:14px; }
+  .sum-num { font-size:28px; }
+  .sum-label { font-size:12px; }
+
+  /* ===== BANNER ===== */
+  .banner { flex-wrap:wrap; gap:8px; padding:12px; }
+  .banner-link { width:100%; text-align:center; }
+
+  /* ===== MACHINE BLOCK ===== */
+  .machine-header { padding:12px 14px; gap:10px; }
+  .machine-name { font-size:13px; line-height:1.4; }
+  .machine-count { font-size:10px; }
+  .hide-mobile { display:none; }
+
+  /* ===== PM TABLE — mobile card layout ===== */
+  .pm-table thead { display:none; }
+  .pm-table tr {
+    display:block;
+    border-bottom:1px solid var(--border);
+    padding:12px 14px;
+  }
+  .pm-table tr:last-child { border-bottom:none; }
+  .pm-table td {
+    display:block;
+    padding:2px 0;
+    font-size:13px;
+    border:none;
+  }
+
+  /* ===== CALENDAR — hide on mobile ===== */
+  .cal-row { display:none; }
+
+  /* ===== REPORT TABLE — scrollable ===== */
+  .report-card { overflow-x:auto; }
+  .report-card table { min-width:540px; }
+
+  /* ===== FORM ===== */
+  .form-grid { grid-template-columns:1fr; }
+  .form-grid-2 { grid-template-columns:1fr; }
+  .form-card { padding:16px; }
+
+  /* ===== LIST TABLE (machines/pmitems) — scrollable ===== */
+  .list-table-wrap, .form-card { overflow-x:auto; }
+  .list-table { min-width:480px; }
+
+  /* ===== MODAL ===== */
+  .modal-box {
+    margin:12px;
+    max-height:calc(100vh - 24px);
+    overflow-y:auto;
+    border-radius:14px;
+  }
+  .modal-box.wide { max-width:100%; }
+
+  /* ===== BUTTONS ===== */
+  .export-row { flex-wrap:wrap; gap:8px; }
+  .export-row button { flex:1; min-width:140px; font-size:12px; }
+
+  /* ===== FILTERS ===== */
+  .filters { flex-wrap:wrap; gap:6px; }
+  .filter-btn { font-size:12px; padding:6px 10px; }
+
+  /* ===== HISTORY TABLE ===== */
+  #historyTable { min-width:520px; }
+
+  /* ===== TOAST ===== */
+  .toast { right:12px; left:12px; text-align:center; font-size:13px; }
+
+  /* ===== SETTINGS ===== */
+  .form-card select, .form-card input { font-size:16px; } /* prevent iOS zoom */
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <div class="logo-icon">⚙️</div>
+    <div class="logo-text">PM Dashboard</div>
+  </div>
+  <div class="topbar-right">
+    <div class="tag-today" id="todayTag"></div>
+    <div id="syncStatus" style="display:flex;align-items:center;gap:5px;font-size:12px;color:var(--text-dim);padding:5px 10px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;">
+      <span id="syncDot" style="font-size:10px;">⏳</span>
+      <span id="syncText">กำลังเชื่อมต่อ...</span>
+    </div>
+    <button class="theme-toggle" id="themeBtn" onclick="toggleTheme()">🌙 โหมดมืด</button>
+    <button class="btn-line" onclick="openLineModal()">📲 ส่ง LINE แจ้งเตือน</button>
+    <div class="company-badge">S.T.Bakery</div>
+  </div>
+</div>
+
+<div class="page-nav">
+  <div class="nav-tab active" onclick="switchPage('dashboard',this)">📊 Dashboard</div>
+  <div class="nav-tab" onclick="switchPage('machines',this)">🏭 จัดการเครื่องจักร</div>
+  <div class="nav-tab" onclick="switchPage('pmitems',this)">🔧 จัดการรายการ PM</div>
+  <div class="nav-tab" onclick="switchPage('report',this)">📋 รายงานประจำวัน</div>
+  <div class="nav-tab" onclick="switchPage('history',this)">📜 ประวัติ PM</div>
+  <div class="nav-tab" onclick="switchPage('settings',this)">⚙️ ตั้งค่า</div>
+</div>
+
+<!-- DASHBOARD -->
+<div id="page-dashboard" class="page active">
+<div class="wrap">
+  <div class="section" style="padding-bottom:0;">
+    <div class="banner">
+      <div class="banner-icon">💬</div>
+      <div class="banner-text"><strong>LINE แจ้งเตือนอัตโนมัติทุก 09:00 น.</strong><br>ระบบส่งรายการ PM ที่ต้องทำวันนี้เข้า Group LINE ช่างอัตโนมัติ</div>
+      <div class="banner-link" onclick="openLineModal()">ดูตัวอย่างข้อความ</div>
+    </div>
+  </div>
+  <div class="section">
+    <div class="section-title">ภาพรวมสถานะ PM</div>
+    <div class="summary-grid">
+      <div class="sum-card red"><div class="sum-num" id="cnt-overdue">0</div><div class="sum-label">🔴 เกินกำหนด</div></div>
+      <div class="sum-card yellow"><div class="sum-num" id="cnt-soon">0</div><div class="sum-label" id="soon-label">🟡 ใกล้ถึงกำหนด (≤14 วัน)</div></div>
+      <div class="sum-card green"><div class="sum-num" id="cnt-ok">0</div><div class="sum-label">🟢 ปกติ</div></div>
+      <div class="sum-card blue"><div class="sum-num" id="cnt-total">0</div><div class="sum-label">📋 รายการ PM ทั้งหมด</div></div>
+    </div>
+  </div>
+  <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;flex-wrap:wrap;gap:10px;">
+    <div class="section-title" style="margin:0;">รายการเครื่องจักร</div>
+    <div class="filters">
+      <button class="filter-btn active" onclick="filterStatus('all',this)">ทั้งหมด</button>
+      <button class="filter-btn" onclick="filterStatus('overdue',this)">🔴 เกินกำหนด</button>
+      <button class="filter-btn" onclick="filterStatus('soon',this)">🟡 ใกล้กำหนด</button>
+      <button class="filter-btn" onclick="filterStatus('ok',this)">🟢 ปกติ</button>
+    </div>
+  </div>
+  <div class="search-bar">
+    <input class="search-input" id="searchBox" type="text" placeholder="🔍  ค้นหาเครื่องจักร หรือ รายการ PM..." oninput="renderAll()">
+  </div>
+  <div id="machine-list"></div>
+  <div style="height:60px;"></div>
+</div>
+</div>
+
+<!-- MACHINES -->
+<div id="page-machines" class="page">
+<div class="wrap">
+  <div class="section">
+    <div class="form-card">
+      <div class="form-title">🏭 เพิ่มเครื่องจักรใหม่</div>
+      <div class="form-grid" style="margin-bottom:14px;">
+        <div class="form-group"><label>ชื่อเครื่องจักร</label><input class="form-control" id="m-name" placeholder="เช่น ไซโล No.3"></div>
+        <div class="form-group"><label>รหัสเครื่อง</label><input class="form-control" id="m-code" placeholder="เช่น SILO-03"></div>
+        <div class="form-group"><label>ประเภท / ไอคอน</label>
+          <select class="form-control" id="m-icon">
+            <option value="🏗️">🏗️ ไซโล</option><option value="💨">💨 เครื่องปั๊มลม</option>
+            <option value="🔄">🔄 สายพาน</option><option value="⚖️">⚖️ เครื่องชั่ง</option>
+            <option value="⚙️">⚙️ ทั่วไป</option><option value="🔥">🔥 เตาอบ</option>
+            <option value="❄️">❄️ ระบบทำความเย็น</option><option value="💡">💡 ระบบไฟฟ้า</option>
+            <option value="🔌">🔌 มอเตอร์</option><option value="🧹">🧹 ทำความสะอาด</option>
+            <option value="🛢️">🛢️ หยอดน้ำมันหล่อลื่น</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-grid" style="margin-bottom:16px;">
+        <div class="form-group"><label>ยี่ห้อ (Brand)</label><input class="form-control" id="m-brand" placeholder="เช่น Siemens, Mitsubishi"></div>
+        <div class="form-group"><label>รุ่น (Model)</label><input class="form-control" id="m-model" placeholder="เช่น S7-300"></div>
+        <div class="form-group"><label>ประเทศ</label><input class="form-control" id="m-country" placeholder="เช่น Germany, Japan"></div>
+        <div class="form-group"><label>Serial No.</label><input class="form-control" id="m-serial" placeholder="เช่น SN-20240001"></div>
+        <div class="form-group"><label>หมายเหตุ</label><input class="form-control" id="m-remark" placeholder="เช่น ติดตั้งปี 2563"></div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn-primary" onclick="addMachine()">+ เพิ่มเครื่องจักร</button>
+        <button class="btn-secondary" onclick="document.getElementById('excelIn').click()">📂 นำเข้าจาก Excel</button>
+        <button class="btn-secondary" onclick="downloadMachineTemplate()">⬇️ Download Template Excel</button>
+        <input type="file" id="excelIn" accept=".xlsx,.xls" style="display:none" onchange="importMachinesFromExcel(this)">
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-title">📂 ลาก Excel มาวางที่นี่</div>
+      <div class="upload-zone" id="dropZone"
+        onclick="document.getElementById('excelIn2').click()"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="dropExcel(event)">
+        <div class="upload-zone-icon">📊</div>
+        <div class="upload-zone-text">คลิกหรือลาก Excel มาวางที่นี่</div>
+        <div class="upload-zone-sub">คอลัมน์: ชื่อเครื่องจักร | รหัส | ประเภท(icon)</div>
+      </div>
+      <input type="file" id="excelIn2" accept=".xlsx,.xls" style="display:none" onchange="importMachinesFromExcel(this)">
+    </div>
+
+    <div class="form-card">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;flex-wrap:wrap;gap:10px;">
+        <div class="form-title" style="margin-bottom:0;">รายการเครื่องจักรทั้งหมด (<span id="machine-count-label">0</span>)</div>
+        <button class="btn-export" onclick="exportMachineList()" style="display:flex;align-items:center;gap:6px;">
+          📥 ดาวน์โหลดข้อมูลเครื่องจักร
+        </button>
+      </div>
+      <table class="list-table">
+        <thead><tr><th>#</th><th>ชื่อเครื่องจักร</th><th>รหัส</th><th>ยี่ห้อ / รุ่น</th><th>ประเทศ</th><th>Serial No.</th><th>หมายเหตุ</th><th>PM</th><th>จัดการ</th></tr></thead>
+        <tbody id="machineListBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+</div>
+
+<!-- PM ITEMS -->
+<div id="page-pmitems" class="page">
+<div class="wrap">
+  <div class="section">
+    <div class="form-card">
+      <div class="form-title">🔧 เพิ่มรายการ PM</div>
+      <div class="form-grid" style="margin-bottom:16px;">
+        <div class="form-group"><label>เครื่องจักร</label>
+          <select class="form-control" id="pm-machine-select"><option value="">— เลือกเครื่องจักร —</option></select>
+        </div>
+        <div class="form-group"><label>รายการที่ต้องทำ</label><input class="form-control" id="pm-task" placeholder="เช่น ตรวจสอบสายพาน"></div>
+        <div class="form-group"><label>รูปแบบความถี่</label>
+          <select class="form-control" id="pm-sched-type" onchange="toggleSchedType(this,'add')">
+            <option value="interval">📅 นับแบบวัน (interval)</option>
+            <option value="monthly">🗓️ ตามวันที่ในเดือน (monthly)</option>
+          </select>
+        </div>
+        <div class="form-group" id="add-interval-group"><label>ความถี่ (วัน)</label>
+          <select class="form-control" id="pm-freq" onchange="toggleFreqCustom(this)">
+            <option value="14">ทุก 2 สัปดาห์</option><option value="30">ทุก 1 เดือน</option>
+            <option value="60">ทุก 2 เดือน</option><option value="90">ทุก 3 เดือน</option>
+            <option value="180">ทุก 6 เดือน</option><option value="365" selected>ทุก 1 ปี</option>
+            <option value="custom">⌨️ กำหนดเอง (ระบุจำนวนวัน)</option>
+          </select>
+          <input class="form-control" type="number" id="pm-freq-custom" placeholder="จำนวนวัน เช่น 45" min="1" style="display:none;margin-top:6px;">
+        </div>
+        <div class="form-group" id="add-monthly-group" style="display:none;"><label>วันที่ในเดือน + ทุก N เดือน</label>
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span style="color:var(--text-mid);font-size:13px;">วันที่</span>
+            <input class="form-control" type="number" id="pm-month-day" placeholder="1-31" min="1" max="31" style="width:72px;text-align:center;">
+            <span style="color:var(--text-mid);font-size:13px;">ของทุก</span>
+            <input class="form-control" type="number" id="pm-month-interval" placeholder="1" min="1" max="24" value="1" style="width:68px;text-align:center;">
+            <span style="color:var(--text-mid);font-size:13px;">เดือน</span>
+          </div>
+          <div style="font-size:11px;color:var(--text-dim);margin-top:6px;">เช่น วันที่ 1 ทุก 1 เดือน = ทุกวันที่ 1 | วันที่ 1 ทุก 3 เดือน = ทุกไตรมาส</div>
+        </div>
+      </div>
+      <div class="form-grid-2" style="margin-bottom:16px;">
+        <div class="form-group">
+          <label>วันที่ทำครั้งล่าสุด</label>
+          <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;">
+            <input class="form-control" type="number" id="pm-lastdone-day" placeholder="วัน" min="1" max="31" style="width:68px;text-align:center;">
+            <select class="form-control" id="pm-lastdone-month" style="width:130px;">
+              <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
+              <option value="3">มีนาคม</option><option value="4">เมษายน</option>
+              <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
+              <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
+              <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
+              <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+            </select>
+            <input class="form-control" type="number" id="pm-lastdone-year" placeholder="ปี พ.ศ." min="2560" max="2600" style="width:100px;text-align:center;">
+          </div>
+        </div>
+        <div class="form-group"><label>หมายเหตุ</label><input class="form-control" id="pm-note" placeholder="เช่น ช่างใส่อุปกรณ์เซฟตี้"></div>
+      </div>
+      <div class="form-grid-2" style="margin-bottom:16px;">
+        <div class="form-group">
+          <label>เตือนล่วงหน้า (วัน) — เว้นว่างเพื่อใช้ค่าตั้งต้นของระบบ</label>
+          <input class="form-control" type="number" id="pm-warn" placeholder="เช่น 30 (ค่าตั้งต้น: ตามระบบ)" min="1">
+        </div>
+        <div class="form-group">
+          <label>ชื่อช่างผู้รับผิดชอบ</label>
+          <input class="form-control" id="pm-technician" placeholder="เช่น นายสมชาย / ทีมช่าง A">
+        </div>
+      </div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn-primary" onclick="addPMItem()">+ เพิ่มรายการ PM</button>
+        <button class="btn-secondary" onclick="document.getElementById('pmExcelIn').click()">📂 นำเข้าจาก Excel</button>
+        <button class="btn-secondary" onclick="downloadPMTemplate()">⬇️ Download Template Excel</button>
+        <input type="file" id="pmExcelIn" accept=".xlsx,.xls" style="display:none" onchange="importPMFromExcel(this)">
+      </div>
+    </div>
+
+    <div class="form-card">
+      <div class="form-title">📂 นำเข้ารายการ PM จาก Excel</div>
+      <div class="upload-zone" id="pmDropZone"
+        onclick="document.getElementById('pmExcelIn2').click()"
+        ondragover="event.preventDefault();this.classList.add('drag')"
+        ondragleave="this.classList.remove('drag')"
+        ondrop="dropPMExcel(event)">
+        <div class="upload-zone-icon">🔧</div>
+        <div class="upload-zone-text">คลิกหรือลาก Excel มาวางที่นี่</div>
+        <div class="upload-zone-sub">คอลัมน์: รหัสเครื่อง | รายการ PM | รูปแบบ | ความถี่/วันที่ | N เดือน | วันทำล่าสุด | หมายเหตุ | ชื่อช่าง | เตือนล่วงหน้า</div>
+      </div>
+      <input type="file" id="pmExcelIn2" accept=".xlsx,.xls" style="display:none" onchange="importPMFromExcel(this)">
+    </div>
+
+    <div class="form-card">
+      <div class="form-title">รายการ PM ทั้งหมด (<span id="pm-count-label">0</span>)</div>
+      <div style="margin-bottom:14px;">
+        <select class="form-control" style="width:280px;" id="pmFilterMachine" onchange="renderPMList()">
+          <option value="">— ทุกเครื่องจักร —</option>
+        </select>
+      </div>
+      <table class="list-table">
+        <thead><tr><th>เครื่องจักร</th><th>รายการ PM</th><th>ความถี่</th><th>ช่างผู้รับผิดชอบ</th><th>เตือนล่วงหน้า</th><th>ทำล่าสุด</th><th>กำหนดถัดไป</th><th>จัดการ</th></tr></thead>
+        <tbody id="pmListBody"></tbody>
+      </table>
+    </div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+</div>
+
+<!-- REPORT -->
+<div id="page-report" class="page">
+<div class="wrap">
+  <div class="section">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;flex-wrap:wrap;gap:12px;">
+      <div>
+        <div class="section-title" style="margin-bottom:4px;">รายงานประจำวัน</div>
+        <div style="font-size:20px;font-weight:700;" id="report-date-label"></div>
+      </div>
+      <div class="export-row no-print">
+        <button class="btn-export" onclick="exportExcelSummary()">📊 Export Excel สรุปทั้งหมด</button>
+        <button class="btn-export" onclick="exportExcelToday()">📋 Export Excel งานค้าง</button>
+        <button class="btn-export" style="background:var(--accent);color:#fff;border-color:var(--accent);" onclick="showPdfSection()">📄 PDF ใบงานช่างรายวัน</button>
+      </div>
+    </div>
+
+    <!-- PDF SECTION (collapsible) -->
+    <div id="pdfSection" style="display:none;margin-bottom:20px;">
+      <div class="report-card">
+        <div class="report-header"><div class="report-title">📄 สร้าง PDF ใบงานช่างรายวัน</div></div>
+        <div style="padding:20px;display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap;">
+          <div class="form-group" style="flex:0 0 auto;">
+            <label style="font-size:11px;color:var(--text-dim);font-weight:600;letter-spacing:0.5px;text-transform:uppercase;display:block;margin-bottom:6px;">เลือกวันที่</label>
+            <div style="display:flex;gap:6px;align-items:center;">
+              <input class="form-control" type="number" id="pdfDay" placeholder="วัน" min="1" max="31" style="width:70px;text-align:center;">
+              <select class="form-control" id="pdfMonth" style="width:110px;">
+                <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
+                <option value="3">มีนาคม</option><option value="4">เมษายน</option>
+                <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
+                <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
+                <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
+                <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+              </select>
+              <input class="form-control" type="number" id="pdfYear" placeholder="ปี (พ.ศ.)" min="2560" max="2600" style="width:110px;text-align:center;">
+            </div>
+          </div>
+          <button class="btn-primary" onclick="openPdfModal()" style="display:flex;align-items:center;gap:8px;padding:10px 20px;">
+            📄 สร้างใบงานช่าง
+          </button>
+          <button class="btn-secondary" onclick="document.getElementById('pdfSection').style.display='none'">ปิด</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="report-card">
+      <div class="report-header">
+        <div class="report-title">🔴 เกินกำหนด / ต้องทำวันนี้</div>
+        <span id="rpt-overdue-count" class="badge badge-red"></span>
+      </div>
+      <table class="pm-table">
+        <thead><tr><th>เครื่องจักร</th><th>รายการ PM</th><th>ความถี่</th><th>กำหนดเดิม</th><th>เกิน(วัน)</th><th>อัปเดตวันที่ทำ</th></tr></thead>
+        <tbody id="rpt-overdue-body"></tbody>
+      </table>
+    </div>
+
+    <div class="report-card">
+      <div class="report-header">
+        <div class="report-title">🟡 ใกล้ถึงกำหนด (ภายใน 14 วัน)</div>
+        <span id="rpt-soon-count" class="badge badge-yellow"></span>
+      </div>
+      <table class="pm-table">
+        <thead><tr><th>เครื่องจักร</th><th>รายการ PM</th><th>ความถี่</th><th>กำหนดถัดไป</th><th>เหลือ(วัน)</th><th>อัปเดตวันที่ทำ</th></tr></thead>
+        <tbody id="rpt-soon-body"></tbody>
+      </table>
+    </div>
+
+    <div class="report-card">
+      <div class="report-header"><div class="report-title">📋 รายการ PM ทั้งหมด</div></div>
+      <table class="pm-table">
+        <thead><tr><th>เครื่องจักร</th><th>รายการ PM</th><th>ความถี่</th><th>ทำล่าสุด</th><th>กำหนดถัดไป</th><th>สถานะ</th><th>อัปเดตวันที่ทำ</th></tr></thead>
+        <tbody id="rpt-all-body"></tbody>
+      </table>
+    </div>
+  </div>
+  <div style="height:60px;"></div>
+</div>
+</div>
+
+<!-- SETTINGS -->
+<div id="page-settings" class="page">
+<div class="wrap">
+  <div class="section">
+    <div class="form-card" style="max-width:600px;">
+      <div class="form-title">⚙️ ตั้งค่าระบบแจ้งเตือน</div>
+
+      <div class="form-group" style="margin-bottom:24px;">
+        <label>เตือน "ใกล้กำหนด" ล่วงหน้ากี่วัน</label>
+        <div style="display:flex;align-items:center;gap:14px;margin-top:8px;">
+          <input class="form-control" type="number" id="warnDaysInput" min="1" max="365" value="14" style="width:100px;font-size:20px;font-weight:700;text-align:center;">
+          <span style="color:var(--text-mid);font-size:14px;">วัน ก่อนถึงกำหนด PM</span>
+        </div>
+        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;">
+          <button class="filter-btn" onclick="setWarnPreset(7)">7 วัน</button>
+          <button class="filter-btn" onclick="setWarnPreset(14)">14 วัน</button>
+          <button class="filter-btn" onclick="setWarnPreset(30)">30 วัน</button>
+          <button class="filter-btn" onclick="setWarnPreset(45)">45 วัน</button>
+          <button class="filter-btn" onclick="setWarnPreset(60)">60 วัน</button>
+        </div>
+      </div>
+
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:24px;">
+        <div style="font-size:12px;color:var(--text-dim);font-weight:600;letter-spacing:1px;text-transform:uppercase;margin-bottom:10px;">ตัวอย่างผลที่จะเห็นใน Dashboard</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <span class="badge badge-red"><span class="dot dot-red"></span>เกินกำหนด</span>
+          <span class="badge badge-yellow"><span class="dot dot-yellow"></span>อีก ≤ <span id="preview-warn">14</span> วัน = ใกล้กำหนด</span>
+          <span class="badge badge-green"><span class="dot dot-green"></span>อีก &gt; <span id="preview-warn2">14</span> วัน = ปกติ</span>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:10px;">
+        <button class="btn-primary" onclick="saveWarnDays()">💾 บันทึกการตั้งค่า</button>
+        <button class="btn-secondary" onclick="setWarnPreset(14)">↩️ รีเซ็ตเป็นค่าตั้งต้น (14 วัน)</button>
+      </div>
+    </div>
+
+    <div class="form-card" style="max-width:600px;">
+      <div class="form-title">ℹ️ ค่าที่ตั้งไว้ปัจจุบัน</div>
+      <div style="display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+          <span style="color:var(--text-mid);">เตือนล่วงหน้า</span>
+          <span style="font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--yellow);" id="current-warn-display">14 วัน</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+          <span style="color:var(--text-mid);">เครื่องจักรทั้งหมด</span>
+          <span style="font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--accent);" id="settings-machine-count">-</span>
+        </div>
+        <div style="display:flex;justify-content:space-between;padding:12px 16px;background:var(--surface2);border-radius:8px;border:1px solid var(--border);">
+          <span style="color:var(--text-mid);">รายการ PM ทั้งหมด</span>
+          <span style="font-weight:700;font-family:'IBM Plex Mono',monospace;color:var(--accent);" id="settings-pm-count">-</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="form-card" style="max-width:600px;">
+      <div class="form-title">🎨 ธีมหน้าจอ</div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="btn-secondary" id="darkBtn" onclick="setTheme('dark')" style="display:flex;align-items:center;gap:8px;padding:12px 20px;">
+          🌙 โหมดมืด (Dark)
+        </button>
+        <button class="btn-secondary" id="lightBtn" onclick="setTheme('light')" style="display:flex;align-items:center;gap:8px;padding:12px 20px;">
+          ☀️ โหมดสว่าง (Light)
+        </button>
+      </div>
+    </div>
+
+    <div class="form-card" style="max-width:600px;">
+      <div class="form-title">📱 QR Code เปิด Dashboard</div>
+      <div class="form-group" style="margin-bottom:12px;">
+        <label>URL ของ Dashboard</label>
+        <div style="display:flex;gap:8px;">
+          <input class="form-control" id="qr-url-input" placeholder="เช่น https://yourusername.github.io/pm-dashboard" style="flex:1;">
+          <button class="btn-primary" onclick="generateQR()">สร้าง QR</button>
+        </div>
+        <div style="font-size:12px;color:var(--text-dim);margin-top:6px;">ถ้ายังไม่มี URL ให้ใส่ - แล้วค่อยกลับมาแก้ทีหลัง</div>
+      </div>
+      <div id="qr-output" style="display:none;text-align:center;padding:20px 0;">
+        <div id="qr-canvas-wrap" style="display:inline-block;padding:16px;background:#fff;border-radius:12px;margin-bottom:12px;"></div>
+        <div style="font-size:13px;color:var(--text-mid);margin-bottom:12px;">สแกน QR เพื่อเปิด PM Dashboard บนมือถือ</div>
+        <button class="btn-export" onclick="printQR()">🖨️ ปริ้น QR Code</button>
+      </div>
+    </div>
+  </div>
+  <div style="height:40px;"></div>
+</div>
+</div>
+
+<!-- HISTORY -->
+<div id="page-history" class="page">
+<div class="wrap">
+  <div class="section">
+    <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:16px;">
+      <div class="section-title" style="margin:0;">📜 ประวัติการทำ PM</div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <select class="form-control" id="hist-filter-month" style="width:140px;" onchange="renderHistory()">
+          <option value="">— ทุกเดือน —</option>
+          <option value="0">มกราคม</option><option value="1">กุมภาพันธ์</option>
+          <option value="2">มีนาคม</option><option value="3">เมษายน</option>
+          <option value="4">พฤษภาคม</option><option value="5">มิถุนายน</option>
+          <option value="6">กรกฎาคม</option><option value="7">สิงหาคม</option>
+          <option value="8">กันยายน</option><option value="9">ตุลาคม</option>
+          <option value="10">พฤศจิกายน</option><option value="11">ธันวาคม</option>
+        </select>
+        <select class="form-control" id="hist-filter-machine" style="width:200px;" onchange="renderHistory()">
+          <option value="">— ทุกเครื่อง —</option>
+        </select>
+        <button class="btn-export" onclick="exportHistoryExcel()">📥 Export Excel รายเดือน</button>
+      </div>
+    </div>
+    <div class="form-card" style="padding:0;overflow:hidden;">
+      <table class="list-table" id="historyTable">
+        <thead><tr>
+          <th>วันที่ทำ</th>
+          <th>เครื่องจักร</th>
+          <th>รายการ PM</th>
+          <th>ช่างผู้ทำ</th>
+          <th>หมายเหตุ/ปัญหาที่พบ</th>
+        </tr></thead>
+        <tbody id="historyBody"></tbody>
+      </table>
+    </div>
+    <div id="hist-empty" style="text-align:center;color:var(--text-dim);padding:40px;display:none;">ยังไม่มีประวัติการทำ PM</div>
+  </div>
+  <div style="height:60px;"></div>
+</div>
+</div>
+<div class="wo-preview" id="woPrintArea"></div>
+
+<!-- PDF WORK ORDER MODAL -->
+<div class="modal-overlay" id="pdfModal" style="z-index:600;">
+  <div class="modal-box" style="max-width:700px;max-height:90vh;overflow-y:auto;">
+    <div class="modal-title">📄 ใบงานช่างรายวัน — <span id="pdfModalDateLabel"></span></div>
+    <div id="pdfPreviewContent" style="background:#fff;color:#000;border-radius:8px;padding:20px;font-family:'Sarabun',sans-serif;font-size:13px;line-height:1.6;border:1px solid var(--border);margin-bottom:16px;"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('pdfModal')">ปิด</button>
+      <button class="btn-primary" onclick="doPrintPDF()" style="display:flex;align-items:center;gap:6px;">🖨️ Print / บันทึก PDF</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT PM MODAL -->
+<div class="modal-overlay" id="editPMModal">
+  <div class="modal-box" style="max-width:860px;width:95%;padding:32px 36px;">
+    <div class="modal-title" style="font-size:19px;margin-bottom:20px;">✏️ แก้ไขรายการ PM</div>
+
+    <!-- Row 1: เครื่องจักร + รายการ -->
+    <div style="display:grid;grid-template-columns:1fr 2fr;gap:16px;margin-bottom:16px;">
+      <div class="form-group"><label>เครื่องจักร</label>
+        <select class="form-control" id="edit-machine-select"></select>
+      </div>
+      <div class="form-group"><label>รายการที่ต้องทำ</label>
+        <input class="form-control" id="edit-task">
+      </div>
+    </div>
+
+    <!-- Row 2: ความถี่ + ชื่อช่าง -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      <div class="form-group"><label>รูปแบบความถี่</label>
+        <select class="form-control" id="edit-sched-type" onchange="toggleSchedType(this,'edit')" style="margin-bottom:8px;">
+          <option value="interval">📅 นับแบบวัน (interval)</option>
+          <option value="monthly">🗓️ ตามวันที่ในเดือน (monthly)</option>
+        </select>
+        <!-- interval -->
+        <div id="edit-interval-group">
+          <select class="form-control" id="edit-freq" onchange="toggleEditFreqCustom(this)">
+            <option value="14">ทุก 2 สัปดาห์</option><option value="30">ทุก 1 เดือน</option>
+            <option value="60">ทุก 2 เดือน</option><option value="90">ทุก 3 เดือน</option>
+            <option value="180">ทุก 6 เดือน</option><option value="365">ทุก 1 ปี</option>
+            <option value="custom">⌨️ กำหนดเอง</option>
+          </select>
+          <input class="form-control" type="number" id="edit-freq-custom" placeholder="จำนวนวัน" min="1" style="display:none;margin-top:6px;">
+        </div>
+        <!-- monthly -->
+        <div id="edit-monthly-group" style="display:none;">
+          <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+            <span style="color:var(--text-mid);font-size:13px;">วันที่</span>
+            <input class="form-control" type="number" id="edit-month-day" placeholder="1-31" min="1" max="31" style="width:72px;text-align:center;">
+            <span style="color:var(--text-mid);font-size:13px;">ของทุก</span>
+            <input class="form-control" type="number" id="edit-month-interval" placeholder="1" min="1" max="24" value="1" style="width:68px;text-align:center;">
+            <span style="color:var(--text-mid);font-size:13px;">เดือน</span>
+          </div>
+        </div>
+      </div>
+      <div class="form-group"><label>ชื่อช่างผู้รับผิดชอบ</label>
+        <input class="form-control" id="edit-technician" placeholder="เช่น นายสมชาย / ทีมช่าง A">
+      </div>
+    </div>
+
+    <!-- Row 3: วันที่ทำล่าสุด + เตือนล่วงหน้า -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+      <div class="form-group">
+        <label>วันที่ทำครั้งล่าสุด</label>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <input class="form-control" type="number" id="edit-lastdone-day" placeholder="วัน" min="1" max="31" style="width:72px;text-align:center;">
+          <select class="form-control" id="edit-lastdone-month" style="flex:1;">
+            <option value="1">มกราคม</option><option value="2">กุมภาพันธ์</option>
+            <option value="3">มีนาคม</option><option value="4">เมษายน</option>
+            <option value="5">พฤษภาคม</option><option value="6">มิถุนายน</option>
+            <option value="7">กรกฎาคม</option><option value="8">สิงหาคม</option>
+            <option value="9">กันยายน</option><option value="10">ตุลาคม</option>
+            <option value="11">พฤศจิกายน</option><option value="12">ธันวาคม</option>
+          </select>
+          <input class="form-control" type="number" id="edit-lastdone-year" placeholder="ปี พ.ศ." min="2560" max="2600" style="width:108px;text-align:center;">
+        </div>
+      </div>
+      <div class="form-group">
+        <label>เตือนล่วงหน้า (วัน) — เว้นว่างใช้ค่าตั้งต้น</label>
+        <input class="form-control" type="number" id="edit-warn" placeholder="เช่น 30" min="1">
+      </div>
+    </div>
+
+    <!-- Row 4: หมายเหตุ full width -->
+    <div class="form-group" style="margin-bottom:20px;">
+      <label>หมายเหตุ / คำแนะนำช่าง</label>
+      <input class="form-control" id="edit-note" placeholder="เช่น ช่างใส่อุปกรณ์เซฟตี้">
+    </div>
+
+    <div class="modal-footer" style="margin-top:0;">
+      <button class="btn-secondary" onclick="closeModal('editPMModal')">ยกเลิก</button>
+      <button class="btn-primary" style="padding:10px 28px;font-size:15px;" onclick="saveEditPM()">💾 บันทึกการแก้ไข</button>
+    </div>
+  </div>
+</div>
+
+<!-- EDIT MACHINE MODAL -->
+<div class="modal-overlay" id="editMachineModal">
+  <div class="modal-box" style="max-width:640px;">
+    <div class="modal-title">✏️ แก้ไขข้อมูลเครื่องจักร</div>
+
+    <div class="form-grid-2" style="margin-bottom:14px;">
+      <div class="form-group">
+        <label>ชื่อเครื่องจักร</label>
+        <input class="form-control" id="edit-m-name" placeholder="เช่น ไซโล No.1">
+      </div>
+      <div class="form-group">
+        <label>รหัสเครื่อง</label>
+        <input class="form-control" id="edit-m-code" placeholder="เช่น SILO-01">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px;">
+      <label>ประเภท (ไอคอน)</label>
+      <select class="form-control" id="edit-m-icon">
+        <option value="🏗️">🏗️ ไซโล</option>
+        <option value="💨">💨 ปั๊มลม</option>
+        <option value="🔄">🔄 สายพาน</option>
+        <option value="⚖️">⚖️ เครื่องชั่ง</option>
+        <option value="⚙️">⚙️ ทั่วไป</option>
+        <option value="🔥">🔥 เตาอบ</option>
+        <option value="❄️">❄️ ทำความเย็น</option>
+        <option value="💡">💡 ไฟฟ้า</option>
+        <option value="🔌">🔌 มอเตอร์</option>
+        <option value="🧹">🧹 ทำความสะอาด</option>
+        <option value="🛢️">🛢️ หยอดน้ำมัน</option>
+      </select>
+    </div>
+    <div class="form-grid-2" style="margin-bottom:14px;">
+      <div class="form-group">
+        <label>ยี่ห้อ (Brand)</label>
+        <input class="form-control" id="edit-m-brand" placeholder="เช่น Siemens">
+      </div>
+      <div class="form-group">
+        <label>รุ่น (Model)</label>
+        <input class="form-control" id="edit-m-model" placeholder="เช่น S7-300">
+      </div>
+    </div>
+    <div class="form-grid-2" style="margin-bottom:14px;">
+      <div class="form-group">
+        <label>ประเทศ</label>
+        <input class="form-control" id="edit-m-country" placeholder="เช่น Germany">
+      </div>
+      <div class="form-group">
+        <label>Serial No.</label>
+        <input class="form-control" id="edit-m-serial" placeholder="เช่น SN-20240001">
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:20px;">
+      <label>หมายเหตุ</label>
+      <input class="form-control" id="edit-m-remark" placeholder="เช่น ติดตั้งปี 2563">
+    </div>
+
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('editMachineModal')">ยกเลิก</button>
+      <button class="btn-primary" onclick="saveEditMachine()">💾 บันทึกการแก้ไข</button>
+    </div>
+  </div>
+</div>
+
+<!-- LINE MODAL -->
+<div class="modal-overlay" id="lineModal">
+  <div class="modal-box">
+    <div class="modal-title">📲 ตัวอย่างข้อความ LINE แจ้งเตือน</div>
+    <div class="modal-body" id="lineModalBody"></div>
+    <div class="modal-footer">
+      <button class="btn-secondary" onclick="closeModal('lineModal')">ปิด</button>
+      <button class="btn-primary" onclick="copyLineMsg()">📋 Copy ข้อความ</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const MONTHS_TH=['ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];
+const today=new Date(); today.setHours(0,0,0,0);
+const currentMonth=today.getMonth();
+function daysAgo(n){const d=new Date(today);d.setDate(d.getDate()-n);return d;}
+function addDays(d,n){const r=new Date(d);r.setDate(r.getDate()+n);return r;}
+function formatDate(d){if(!d)return'-';const dd=new Date(d);return `${dd.getDate()} ${MONTHS_TH[dd.getMonth()]} ${dd.getFullYear()+543}`;}
+function formatDateInput(d){if(!d)return'';const dd=new Date(d);return `${dd.getFullYear()}-${String(dd.getMonth()+1).padStart(2,'0')}-${String(dd.getDate()).padStart(2,'0')}`;}
+function parseInputDate(s){if(!s)return null;const p=s.split('-');return new Date(+p[0],+p[1]-1,+p[2]);}
+function freqLabel(item){
+  if(typeof item==='object'&&item!==null){
+    if(item.scheduleType==='monthly'){
+      const d=item.monthDay||1;
+      const n=item.monthInterval||1;
+      return n===1?`ทุกวันที่ ${d}`:`วันที่ ${d} ทุก ${n} เดือน`;
+    }
+    const f=item.freq;
+    return f==365?'1 ปี':f==180?'6 เดือน':f==90?'3 เดือน':f==60?'2 เดือน':f==30?'1 เดือน':f==14?'2 สัปดาห์':f+'วัน';
+  }
+  // legacy: freqLabel called with number
+  const f=item;
+  return f==365?'1 ปี':f==180?'6 เดือน':f==90?'3 เดือน':f==60?'2 เดือน':f==30?'1 เดือน':f==14?'2 สัปดาห์':f+'วัน';
+}
+let _uid=100; function genId(){return 'id'+(++_uid);}
+const COLORS=['#5c7cfa','#ffa502','#2ed573','#ff6b81','#ff6348','#a29bfe','#00cec9','#fd79a8'];
+function machineColor(i){return COLORS[i%COLORS.length];}
+let pmHistory=[]; // {id, itemId, machineId, task, machineName, doneDate, tech, note, loggedAt}
+
+let machines=[
+  {id:'m1',name:'ไซโล ความจุแป้ง 30 ลบ.น. No.1',code:'SILO-01',icon:'🏗️',color:'#5c7cfa'},
+  {id:'m2',name:'ไซโล ความจุแป้ง 30 ลบ.น. No.2',code:'SILO-02',icon:'🏗️',color:'#5c7cfa'},
+  {id:'m3',name:'เครื่องปั๊มลมโบว์เวอร์ ส่งแป้งไปที่ Hopper (RH01)',code:'RH-01',icon:'💨',color:'#ffa502'},
+  {id:'m4',name:'สายพานลำเลียงแป้ง (CB-01)',code:'CB-01',icon:'🔄',color:'#2ed573'},
+  {id:'m5',name:'เครื่องชั่งอัตโนมัติ (AW-02)',code:'AW-02',icon:'⚖️',color:'#ff6b81'},
+];
+let pmItems=[
+  {id:'p1',machineId:'m1',task:'รมยาภายในถังไซโล และเปลี่ยนซีลฝาครอบเมนโฮล',freq:365,lastDone:daysAgo(13),techNote:'ทุก 1 ปี'},
+  {id:'p2',machineId:'m1',task:'เปลี่ยนถุงผ้าข้างบน และทำความสะอาดด้านบนถังไซโล',freq:60,lastDone:daysAgo(2),techNote:'ทุก 2 เดือน — ช่างใส่อุปกรณ์เซฟตี้'},
+  {id:'p3',machineId:'m2',task:'รมยาภายในถังไซโล และเปลี่ยนซีลฝาครอบเมนโฮล',freq:365,lastDone:daysAgo(370),techNote:'ทุก 1 ปี'},
+  {id:'p4',machineId:'m2',task:'เปลี่ยนถุงผ้าข้างบน และทำความสะอาดด้านบนถังไซโล',freq:60,lastDone:daysAgo(65),techNote:'ทุก 2 เดือน — ช่างใส่อุปกรณ์เซฟตี้'},
+  {id:'p5',machineId:'m3',task:'ตรวจสอบสายพาน ถ้าแตกกร้าวให้เปลี่ยนทันที',freq:180,lastDone:daysAgo(170),techNote:'ทุก 6 เดือน'},
+  {id:'p6',machineId:'m3',task:'ทำความสะอาดตัวกรองอากาศ หากชำรุดให้พิจารณาเปลี่ยน',freq:180,lastDone:daysAgo(10),techNote:'ทุก 6 เดือน'},
+  {id:'p7',machineId:'m3',task:'เปลี่ยนน้ำมันเกียร์',freq:365,lastDone:daysAgo(20),techNote:'ทุก 1 ปี'},
+  {id:'p8',machineId:'m4',task:'ตรวจสอบความตึงสายพาน และปรับให้ได้ค่า',freq:30,lastDone:daysAgo(12),techNote:'ทุก 1 เดือน'},
+  {id:'p9',machineId:'m4',task:'หล่อลื่น Bearing ทุกจุด',freq:90,lastDone:daysAgo(91),techNote:'ทุก 3 เดือน'},
+  {id:'p10',machineId:'m4',task:'ตรวจสอบและเปลี่ยน Roller ที่ชำรุด',freq:180,lastDone:daysAgo(30),techNote:'ทุก 6 เดือน'},
+  {id:'p11',machineId:'m5',task:'สอบเทียบ Load Cell และ Display',freq:180,lastDone:daysAgo(5),techNote:'ทุก 6 เดือน'},
+  {id:'p12',machineId:'m5',task:'ทำความสะอาดถาดชั่งและรางป้อน',freq:14,lastDone:daysAgo(16),techNote:'ทุก 2 สัปดาห์'},
+];
+let doneDates={};
+let currentFilter='all';
+
+let warnDays=14; // configurable warning threshold
+
+// คำนวณวัน nextDue สำหรับ monthly schedule
+function computeNextMonthlyDue(item, refDate){
+  const day=item.monthDay||1;
+  const interval=item.monthInterval||1;
+  const lastDone=doneDates[item.id]||item.lastDone;
+  const base=new Date(lastDone); base.setHours(0,0,0,0);
+  const ref=new Date(refDate); ref.setHours(0,0,0,0);
+
+  // หา nextDue ที่อยู่หลัง lastDone โดยเพิ่มทีละ interval เดือน
+  let yr=base.getFullYear(), mo=base.getMonth();
+  // เริ่มจากเดือนถัดไป interval เดือน
+  mo+=interval;
+  if(mo>11){yr+=Math.floor(mo/12);mo=mo%12;}
+  let next=new Date(yr,mo,day);
+  // ถ้ายังอยู่ก่อน ref ให้เดินต่อ
+  while(next<ref){
+    mo+=interval;
+    if(mo>11){yr+=Math.floor(mo/12);mo=mo%12;}
+    next=new Date(yr,mo,day);
+  }
+  return next;
+}
+
+function computeStatus(item){
+  const lastDone=doneDates[item.id]||item.lastDone;
+  let nextDue;
+  if(item.scheduleType==='monthly'){
+    nextDue=computeNextMonthlyDue(item,today);
+  } else {
+    nextDue=addDays(lastDone,item.freq);
+  }
+  const diffDays=Math.ceil((nextDue-today)/86400000);
+  const pct=item.scheduleType==='monthly'?Math.min(100,Math.max(0,100-diffDays*3)):Math.max(0,Math.min(100,((item.freq-diffDays)/item.freq)*100));
+  const itemWarn=(item.warnDays&&item.warnDays>0)?item.warnDays:warnDays;
+  const status=diffDays<=0?'overdue':diffDays<=itemWarn?'soon':'ok';
+  return{nextDue,diffDays,pct,status,lastDone};
+}
+
+// ===== DASHBOARD =====
+function renderAll(){
+  const q=(document.getElementById('searchBox')?.value||'').toLowerCase();
+  let ov=0,sn=0,ok=0,tot=0;
+  const list=document.getElementById('machine-list');
+  list.innerHTML='';
+
+  machines.forEach((machine,mi)=>{
+    const col=machine.color||machineColor(mi);
+    const items=pmItems.filter(i=>i.machineId===machine.id);
+    let cnt={overdue:0,soon:0,ok:0};
+    let rows='';
+
+    items.forEach(item=>{
+      const{nextDue,diffDays,pct,status,lastDone}=computeStatus(item);
+      cnt[status]++;tot++;
+      if(status==='overdue')ov++;else if(status==='soon')sn++;else ok++;
+      if(currentFilter!=='all'&&status!==currentFilter)return;
+      if(q&&!machine.name.toLowerCase().includes(q)&&!item.task.toLowerCase().includes(q))return;
+
+      let sch=[];let d2=new Date(lastDone);
+      for(let i=0;i<24;i++){d2=addDays(d2,item.freq);if(d2.getFullYear()===today.getFullYear())sch.push(d2.getMonth());}
+      const cal=MONTHS_TH.map((m,i)=>{
+        let c='cal-month';
+        if(i===currentMonth)c+=' current';
+        else if(sch.includes(i)){const t=new Date(today.getFullYear(),i,15);c+=t<today?' overdue-m':' has-pm';}
+        return`<div class="${c}">${m}</div>`;
+      }).join('');
+
+      const badge=status==='overdue'
+        ?`<span class="badge badge-red"><span class="dot dot-red"></span>เกิน ${Math.abs(diffDays)} วัน</span>`
+        :status==='soon'
+        ?`<span class="badge badge-yellow"><span class="dot dot-yellow"></span>อีก ${diffDays} วัน</span>`
+        :`<span class="badge badge-green"><span class="dot dot-green"></span>อีก ${diffDays} วัน</span>`;
+      const fill=status==='overdue'?'var(--red)':status==='soon'?'var(--yellow)':'var(--green)';
+      const isDone=!!doneDates[item.id];
+      const dv=doneDates[item.id]?formatDateInput(doneDates[item.id]):formatDateInput(today);
+
+      rows+=`<tr data-status="${status}">
+        <td>
+          <div style="font-weight:500;margin-bottom:3px;">${item.task}</div>
+          <div style="font-size:11px;color:var(--text-dim);">${item.techNote||''}</div>
+          <div class="cal-row">${cal}</div>
+        </td>
+        <td class="hide-mobile"><span class="freq-chip">${freqLabel(item)}</span></td>
+        <td class="hide-mobile">
+          <div style="font-size:11px;color:var(--text-dim);">ครั้งสุดท้าย</div>
+          <div style="font-size:13px;color:var(--text-mid);">${formatDate(lastDone)}</div>
+          <div style="font-size:11px;color:var(--accent);margin-top:2px;">→ ถัดไป ${formatDate(nextDue)}</div>
+        </td>
+        <td>${badge}</td>
+      </tr>`;
+    });
+
+    if(!rows&&q&&!machine.name.toLowerCase().includes(q))return;
+    if(!rows&&currentFilter!=='all')return;
+
+    const dot=cnt.overdue>0?'🔴':cnt.soon>0?'🟡':'🟢';
+    const b=document.createElement('div');
+    b.className='machine-block';
+    b.innerHTML=`
+      <div class="machine-header open" onclick="toggleMachine(this)">
+        <div class="machine-icon" style="background:${col}20;border:1px solid ${col}40;">${machine.icon}</div>
+        <div class="machine-name">${machine.name}</div>
+        <div class="machine-count">${dot} ${cnt.overdue} เกิน / ${cnt.soon} ใกล้ / ${cnt.ok} ปกติ</div>
+        <div class="chevron">▶</div>
+      </div>
+      <div class="machine-body open">
+        <table class="pm-table">
+          <thead><tr>
+            <th>รายการ PM</th><th class="hide-mobile">ความถี่</th><th class="hide-mobile">วันที่</th>
+            <th>สถานะ</th>
+          </tr></thead>
+          <tbody>${rows||'<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:20px;">— ไม่มีรายการ —</td></tr>'}</tbody>
+        </table>
+      </div>`;
+    list.appendChild(b);
+  });
+
+  document.getElementById('cnt-overdue').textContent=ov;
+  document.getElementById('cnt-soon').textContent=sn;
+  document.getElementById('cnt-ok').textContent=ok;
+  document.getElementById('cnt-total').textContent=tot;
+}
+
+function filterStatus(status,btn){
+  currentFilter=status;
+  document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAll();
+}
+function toggleMachine(h){h.classList.toggle('open');h.nextElementSibling.classList.toggle('open');}
+
+// ===== MACHINES =====
+function renderMachineList(){
+  document.getElementById('machine-count-label').textContent=machines.length;
+  document.getElementById('machineListBody').innerHTML=machines.map((m,i)=>{
+    const cnt=pmItems.filter(p=>p.machineId===m.id).length;
+    const brandModel=[m.brand,m.model].filter(Boolean).join(' / ')||'-';
+    return`<tr>
+      <td style="color:var(--text-dim);">${i+1}</td>
+      <td><span style="font-size:16px;margin-right:6px;">${m.icon}</span>${m.name}</td>
+      <td><span class="freq-chip">${m.code||'-'}</span></td>
+      <td style="font-size:13px;">${brandModel}</td>
+      <td style="font-size:13px;">${m.country||'-'}</td>
+      <td style="font-size:12px;font-family:'IBM Plex Mono',monospace;color:var(--text-mid);">${m.serial||'-'}</td>
+      <td style="font-size:12px;color:var(--text-dim);">${m.remark||'-'}</td>
+      <td><span class="badge badge-green" style="font-size:11px;">${cnt} รายการ</span></td>
+      <td style="display:flex;gap:6px;">
+        <button class="btn-secondary" style="padding:5px 10px;font-size:12px;" onclick="openEditMachine('${m.id}')">✏️ แก้ไข</button>
+        <button class="btn-danger" onclick="deleteMachine('${m.id}')">ลบ</button>
+      </td>
+    </tr>`;
+  }).join('');
+  refreshSelects();
+}
+
+function addMachine(){
+  const name=document.getElementById('m-name').value.trim();
+  const code=document.getElementById('m-code').value.trim();
+  const icon=document.getElementById('m-icon').value;
+  const brand=document.getElementById('m-brand').value.trim();
+  const model=document.getElementById('m-model').value.trim();
+  const country=document.getElementById('m-country').value.trim();
+  const serial=document.getElementById('m-serial').value.trim();
+  const remark=document.getElementById('m-remark').value.trim();
+  if(!name){showToast('กรุณากรอกชื่อเครื่องจักร');return;}
+  machines.push({id:genId(),name,code,icon,brand,model,country,serial,remark,color:machineColor(machines.length)});
+  const _newM = machines[machines.length-1];
+  if(db) fbSaveMachine(_newM);
+  document.getElementById('m-name').value='';
+  document.getElementById('m-code').value='';
+  document.getElementById('m-brand').value='';
+  document.getElementById('m-model').value='';
+  document.getElementById('m-country').value='';
+  document.getElementById('m-serial').value='';
+  document.getElementById('m-remark').value='';
+  renderMachineList();renderAll();
+  showToast('✓ เพิ่มเครื่องจักรแล้ว');
+}
+
+function deleteMachine(id){
+  if(!confirm('ลบเครื่องจักรนี้? (รายการ PM จะถูกลบด้วย)'))return;
+  // ลบ PM items ของเครื่องนี้จาก Firebase ก่อน
+  pmItems.filter(p=>p.machineId===id).forEach(p=>{ if(db) fbDeletePMItem(p.id); });
+  machines=machines.filter(m=>m.id!==id);
+  pmItems=pmItems.filter(p=>p.machineId!==id);
+  if(db) fbDeleteMachine(id);
+  else { renderMachineList();renderPMList();renderAll(); }
+  showToast('ลบเครื่องจักรแล้ว');
+}
+
+let _editingMachineId=null;
+
+function openEditMachine(id){
+  const m=machines.find(x=>x.id===id);
+  if(!m)return;
+  _editingMachineId=id;
+  document.getElementById('edit-m-name').value=m.name;
+  document.getElementById('edit-m-code').value=m.code||'';
+  document.getElementById('edit-m-icon').value=m.icon||'⚙️';
+  document.getElementById('edit-m-brand').value=m.brand||'';
+  document.getElementById('edit-m-model').value=m.model||'';
+  document.getElementById('edit-m-country').value=m.country||'';
+  document.getElementById('edit-m-serial').value=m.serial||'';
+  document.getElementById('edit-m-remark').value=m.remark||'';
+  document.getElementById('editMachineModal').classList.add('open');
+}
+
+function saveEditMachine(){
+  const m=machines.find(x=>x.id===_editingMachineId);
+  if(!m)return;
+  const name=document.getElementById('edit-m-name').value.trim();
+  if(!name){showToast('กรุณากรอกชื่อเครื่องจักร');return;}
+  m.name=name;
+  m.code=document.getElementById('edit-m-code').value.trim();
+  m.icon=document.getElementById('edit-m-icon').value;
+  m.brand=document.getElementById('edit-m-brand').value.trim();
+  m.model=document.getElementById('edit-m-model').value.trim();
+  m.country=document.getElementById('edit-m-country').value.trim();
+  m.serial=document.getElementById('edit-m-serial').value.trim();
+  m.remark=document.getElementById('edit-m-remark').value.trim();
+  closeModal('editMachineModal');
+  if(db) fbSaveMachine(m);
+  else { renderMachineList();renderAll();renderReport(); }
+  showToast('✓ บันทึกการแก้ไขเครื่องจักรแล้ว');
+}
+
+function importMachinesFromExcel(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:'binary'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+    let added=0;
+    rows.slice(1).forEach(r=>{
+      if(!r[0])return;
+      machines.push({
+        id:genId(),
+        name:String(r[0]),
+        code:String(r[1]||''),
+        icon:String(r[2]||'⚙️'),
+        brand:String(r[3]||''),
+        model:String(r[4]||''),
+        country:String(r[5]||''),
+        serial:String(r[6]||''),
+        remark:String(r[7]||''),
+        color:machineColor(machines.length)
+      });
+      added++;
+    });
+    renderMachineList();renderAll();
+    showToast(`✓ นำเข้าเครื่องจักร ${added} รายการ`);
+  };
+  reader.readAsBinaryString(file);
+  input.value='';
+  document.getElementById('dropZone').classList.remove('drag');
+}
+
+function dropExcel(e){
+  e.preventDefault();
+  document.getElementById('dropZone').classList.remove('drag');
+  const file=e.dataTransfer.files[0];if(!file)return;
+  importMachinesFromExcel({files:[file]});
+}
+
+function downloadMachineTemplate(){
+  const headers=['ชื่อเครื่องจักร','รหัสเครื่อง','ประเภท(icon)','ยี่ห้อ (Brand)','รุ่น (Model)','ประเทศ','Serial No.','หมายเหตุ'];
+  const examples=[
+    ['ไซโล No.3','SILO-03','🏗️','Bühler','MZSH','Switzerland','SN-20240001','ติดตั้งปี 2563'],
+    ['เครื่องผสม MX-01','MX-01','⚙️','Hobart','HL200','USA','SN-20220015',''],
+    ['ปั๊มลม AC-01','AC-01','💨','Atlas Copco','GA15','Belgium','','ตรวจสอบทุก 3 เดือน'],
+  ];
+  const ws=XLSX.utils.aoa_to_sheet([headers,...examples]);
+  ws['!cols']=[{wch:30},{wch:14},{wch:14},{wch:20},{wch:16},{wch:16},{wch:18},{wch:30}];
+  // Sheet คำอธิบาย
+  const wsInfo=XLSX.utils.aoa_to_sheet([
+    ['คำอธิบายคอลัมน์ Template เครื่องจักร'],
+    [''],
+    ['คอลัมน์','คำอธิบาย','ตัวอย่าง'],
+    ['ชื่อเครื่องจักร','ชื่อเต็มของเครื่อง (จำเป็น)','ไซโล No.3'],
+    ['รหัสเครื่อง','รหัสสั้นสำหรับอ้างอิง','SILO-03'],
+    ['ประเภท(icon)','อีโมจิบอกประเภทเครื่อง','🏗️ 💨 🔄 ⚖️ ⚙️ 🔥 ❄️ 💡 🔌 🧹 🛢️'],
+    ['ยี่ห้อ (Brand)','ยี่ห้อผู้ผลิต','Siemens, Mitsubishi, Bühler'],
+    ['รุ่น (Model)','รุ่นหรือ model number','S7-300, MZSH'],
+    ['ประเทศ','ประเทศที่ผลิต','Germany, Japan, Switzerland'],
+    ['Serial No.','หมายเลขซีเรียลของเครื่อง','SN-20240001'],
+    ['หมายเหตุ','ข้อมูลเพิ่มเติมอื่นๆ','ติดตั้งปี 2563'],
+  ]);
+  wsInfo['!cols']=[{wch:18},{wch:40},{wch:40}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'เครื่องจักร');
+  XLSX.utils.book_append_sheet(wb,wsInfo,'คำอธิบาย');
+  XLSX.writeFile(wb,'template_machines.xlsx');
+  showToast('✓ ดาวน์โหลด Template เครื่องจักรแล้ว');
+}
+
+// ===== PM ITEMS =====
+function refreshSelects(){
+  const opts=`<option value="">— เลือกเครื่องจักร —</option>`+machines.map(m=>`<option value="${m.id}">${m.icon} ${m.name}</option>`).join('');
+  document.getElementById('pm-machine-select').innerHTML=opts;
+  document.getElementById('pmFilterMachine').innerHTML=`<option value="">— ทุกเครื่องจักร —</option>`+machines.map(m=>`<option value="${m.id}">${m.icon} ${m.name}</option>`).join('');
+}
+
+function renderPMList(){
+  const filt=document.getElementById('pmFilterMachine')?.value||'';
+  const list=filt?pmItems.filter(p=>p.machineId===filt):pmItems;
+  document.getElementById('pm-count-label').textContent=list.length;
+  document.getElementById('pmListBody').innerHTML=list.map(item=>{
+    const m=machines.find(x=>x.id===item.machineId);
+    const{nextDue,lastDone}=computeStatus(item);
+    const wLabel=item.warnDays?`<span class="freq-chip" style="border-color:var(--yellow);color:var(--yellow);">${item.warnDays} วัน</span>`:`<span style="font-size:11px;color:var(--text-dim);">ระบบ (${warnDays} วัน)</span>`;
+    const techLabel=item.technician?`<span style="font-size:13px;color:var(--text);">👤 ${item.technician}</span>`:`<span style="font-size:11px;color:var(--text-dim);">— ยังไม่ระบุ —</span>`;
+    return`<tr>
+      <td>${m?m.icon+' '+m.name:'-'}</td>
+      <td>${item.task}<br><span style="font-size:11px;color:var(--text-dim);">${item.techNote||''}</span></td>
+      <td><span class="freq-chip">${freqLabel(item)}</span></td>
+      <td>${techLabel}</td>
+      <td>
+        <div style="display:flex;align-items:center;gap:6px;">
+          ${wLabel}
+          <button class="btn-secondary" style="padding:3px 8px;font-size:11px;" onclick="editItemWarn('${item.id}')">แก้ไข</button>
+        </div>
+      </td>
+      <td>${formatDate(lastDone)}</td>
+      <td style="color:var(--accent);">${formatDate(nextDue)}</td>
+      <td style="display:flex;gap:6px;flex-wrap:wrap;">
+        <button class="btn-secondary" style="padding:5px 10px;font-size:12px;" onclick="openEditPM('${item.id}')">✏️ แก้ไข</button>
+        <button class="btn-danger" onclick="deletePMItem('${item.id}')">ลบ</button>
+      </td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="8" style="text-align:center;color:var(--text-dim);padding:20px;">— ยังไม่มีรายการ PM —</td></tr>';
+}
+
+function addPMItem(){
+  const machineId=document.getElementById('pm-machine-select').value;
+  const task=document.getElementById('pm-task').value.trim();
+  const freqObj=getFreqValue();
+  const note=document.getElementById('pm-note').value.trim();
+  const warnVal=parseInt(document.getElementById('pm-warn').value)||0;
+  const technician=document.getElementById('pm-technician').value.trim();
+  if(!machineId){showToast('กรุณาเลือกเครื่องจักร');return;}
+  if(!task){showToast('กรุณากรอกรายการที่ต้องทำ');return;}
+  if(!freqObj){showToast('กรุณาระบุความถี่ให้ถูกต้อง');return;}
+  const dd=parseInt(document.getElementById('pm-lastdone-day').value);
+  const mm=parseInt(document.getElementById('pm-lastdone-month').value);
+  const yy=parseInt(document.getElementById('pm-lastdone-year').value);
+  let lastDone=daysAgo(0);
+  if(dd&&mm&&yy&&yy>2500){lastDone=new Date(yy-543,mm-1,dd);}
+  const newItem={id:genId(),machineId,task,lastDone,techNote:note,warnDays:warnVal||null,technician:technician||null,...freqObj};
+  pmItems.push(newItem);
+  if(db) fbSavePMItem(newItem);
+  document.getElementById('pm-task').value='';
+  document.getElementById('pm-note').value='';
+  document.getElementById('pm-warn').value='';
+  document.getElementById('pm-technician').value='';
+  renderPMList();renderAll();renderReport();
+  showToast('✓ เพิ่มรายการ PM แล้ว');
+}
+
+function deletePMItem(id){
+  pmItems=pmItems.filter(p=>p.id!==id);
+  if(db) fbDeletePMItem(id);
+  else { renderPMList();renderAll();renderReport(); }
+  showToast('ลบรายการ PM แล้ว');
+}
+
+function openEditPM(id){
+  const item=pmItems.find(i=>i.id===id);
+  if(!item)return;
+  _editingPMId=id;
+
+  // Machine dropdown
+  const opts=machines.map(m=>`<option value="${m.id}" ${m.id===item.machineId?'selected':''}>${m.icon} ${m.name}</option>`).join('');
+  document.getElementById('edit-machine-select').innerHTML=opts;
+
+  // Task, note, technician, warn
+  document.getElementById('edit-task').value=item.task;
+  document.getElementById('edit-note').value=item.techNote||'';
+  document.getElementById('edit-technician').value=item.technician||'';
+  document.getElementById('edit-warn').value=item.warnDays||'';
+
+  // Schedule type
+  const schedType=item.scheduleType||'interval';
+  document.getElementById('edit-sched-type').value=schedType;
+  const isMonthly=schedType==='monthly';
+  document.getElementById('edit-interval-group').style.display=isMonthly?'none':'block';
+  document.getElementById('edit-monthly-group').style.display=isMonthly?'block':'none';
+
+  if(isMonthly){
+    document.getElementById('edit-month-day').value=item.monthDay||1;
+    document.getElementById('edit-month-interval').value=item.monthInterval||1;
+  } else {
+    // Interval freq
+    const knownFreqs=['14','30','60','90','180','365'];
+    const freqSel=document.getElementById('edit-freq');
+    if(knownFreqs.includes(String(item.freq))){
+      freqSel.value=String(item.freq);
+      document.getElementById('edit-freq-custom').style.display='none';
+    } else {
+      freqSel.value='custom';
+      document.getElementById('edit-freq-custom').style.display='block';
+      document.getElementById('edit-freq-custom').value=item.freq;
+    }
+  }
+
+  // Last done date
+  const ld=doneDates[id]||item.lastDone;
+  const ldDate=new Date(ld);
+  document.getElementById('edit-lastdone-day').value=ldDate.getDate();
+  document.getElementById('edit-lastdone-month').value=ldDate.getMonth()+1;
+  document.getElementById('edit-lastdone-year').value=ldDate.getFullYear()+543;
+
+  document.getElementById('editPMModal').classList.add('open');
+}
+
+function saveEditPM(){
+  const item=pmItems.find(i=>i.id===_editingPMId);
+  if(!item)return;
+
+  const task=document.getElementById('edit-task').value.trim();
+  if(!task){showToast('กรุณากรอกรายการที่ต้องทำ');return;}
+
+  const schedType=document.getElementById('edit-sched-type').value;
+  if(schedType==='monthly'){
+    const day=parseInt(document.getElementById('edit-month-day').value);
+    const interval=parseInt(document.getElementById('edit-month-interval').value)||1;
+    if(!day||day<1||day>31){showToast('กรุณาระบุวันที่ในเดือน (1-31)');return;}
+    item.scheduleType='monthly';
+    item.monthDay=day;
+    item.monthInterval=interval;
+    delete item.freq;
+  } else {
+    const freqSel=document.getElementById('edit-freq');
+    let freq;
+    if(freqSel.value==='custom'){
+      freq=parseInt(document.getElementById('edit-freq-custom').value);
+      if(!freq||freq<1){showToast('กรุณาระบุความถี่ที่ถูกต้อง');return;}
+    } else {
+      freq=parseInt(freqSel.value);
+    }
+    item.scheduleType='interval';
+    item.freq=freq;
+    delete item.monthDay; delete item.monthInterval;
+  }
+
+  // Last done
+  const dd=parseInt(document.getElementById('edit-lastdone-day').value);
+  const mm=parseInt(document.getElementById('edit-lastdone-month').value);
+  const yy=parseInt(document.getElementById('edit-lastdone-year').value);
+  if(dd&&mm&&yy&&yy>2500) item.lastDone=new Date(yy-543,mm-1,dd);
+
+  item.machineId=document.getElementById('edit-machine-select').value;
+  item.task=task;
+  item.techNote=document.getElementById('edit-note').value.trim();
+  item.technician=document.getElementById('edit-technician').value.trim()||null;
+  item.warnDays=parseInt(document.getElementById('edit-warn').value)||null;
+  delete doneDates[_editingPMId];
+
+  closeModal('editPMModal');
+  if(db) fbSavePMItem(item);
+  else { renderPMList();renderAll();renderReport(); }
+  showToast('✓ บันทึกการแก้ไขแล้ว');
+}
+
+// ===== REPORT =====
+function renderReport(){
+  document.getElementById('report-date-label').textContent=`วันที่ ${formatDate(today)}`;
+  const ov=[],sn=[],all=[];
+  machines.forEach(m=>{
+    pmItems.filter(i=>i.machineId===m.id).forEach(item=>{
+      const{nextDue,diffDays,status,lastDone}=computeStatus(item);
+      const row={id:item.id,machine:m.name,icon:m.icon,task:item.task,freq:freqLabel(item),lastDone,nextDue,diffDays,status};
+      if(status==='overdue')ov.push(row);
+      else if(status==='soon')sn.push(row);
+      all.push(row);
+    });
+  });
+
+  document.getElementById('rpt-overdue-count').textContent=ov.length+' รายการ';
+  document.getElementById('rpt-soon-count').textContent=sn.length+' รายการ';
+
+  const updateCell=(id)=>`
+    <td>
+      <div style="display:flex;align-items:center;gap:6px;">
+        <input type="date" class="date-input" id="rpt-dt-${id}" value="${formatDateInput(today)}" max="${formatDateInput(today)}" style="width:130px;">
+        <button class="btn-done" onclick="reportMarkDone('${id}')" style="white-space:nowrap;">✓ อัปเดต</button>
+      </div>
+    </td>`;
+
+  document.getElementById('rpt-overdue-body').innerHTML=ov.length
+    ?ov.map(r=>`<tr>
+        <td>${r.icon} ${r.machine}</td><td>${r.task}</td><td><span class="freq-chip">${r.freq}</span></td>
+        <td>${formatDate(r.nextDue)}</td>
+        <td><span class="badge badge-red">${Math.abs(r.diffDays)} วัน</span></td>
+        ${updateCell(r.id)}
+      </tr>`).join('')
+    :'<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:16px;">✅ ไม่มีรายการเกินกำหนด</td></tr>';
+
+  document.getElementById('rpt-soon-body').innerHTML=sn.length
+    ?sn.map(r=>`<tr>
+        <td>${r.icon} ${r.machine}</td><td>${r.task}</td><td><span class="freq-chip">${r.freq}</span></td>
+        <td>${formatDate(r.nextDue)}</td>
+        <td><span class="badge badge-yellow">${r.diffDays} วัน</span></td>
+        ${updateCell(r.id)}
+      </tr>`).join('')
+    :'<tr><td colspan="6" style="text-align:center;color:var(--text-dim);padding:16px;">✅ ไม่มีรายการใกล้กำหนด</td></tr>';
+
+  document.getElementById('rpt-all-body').innerHTML=all.map(r=>{
+    const badge=r.status==='overdue'?`<span class="badge badge-red">เกินกำหนด</span>`:r.status==='soon'?`<span class="badge badge-yellow">ใกล้กำหนด</span>`:`<span class="badge badge-green">ปกติ</span>`;
+    return`<tr>
+      <td>${r.icon} ${r.machine}</td><td>${r.task}</td><td><span class="freq-chip">${r.freq}</span></td>
+      <td>${formatDate(r.lastDone)}</td><td>${formatDate(r.nextDue)}</td><td>${badge}</td>
+      ${updateCell(r.id)}
+    </tr>`;
+  }).join('');
+}
+
+function reportMarkDone(id){
+  const el=document.getElementById('rpt-dt-'+id);
+  const d=el?parseInputDate(el.value)||today:today;
+  const item=pmItems.find(i=>i.id===id);
+  if(!item)return;
+  doneDates[id]=d;
+  if(db)fbSaveDoneDate(id,d.toISOString());
+  renderAll();renderReport();
+  showToast(`✓ อัปเดตแล้ว — ถัดไป: ${formatDate(computeStatus(item).nextDue)}`);
+}
+
+// ===== EXCEL EXPORT =====
+function exportExcelSummary(){
+  const rows=[['เครื่องจักร','รหัส','รายการ PM','ความถี่','ทำล่าสุด','กำหนดถัดไป','สถานะ','เกิน/เหลือ(วัน)']];
+  machines.forEach(m=>{
+    pmItems.filter(i=>i.machineId===m.id).forEach(item=>{
+      const{nextDue,diffDays,status,lastDone}=computeStatus(item);
+      const st=status==='overdue'?'เกินกำหนด':status==='soon'?'ใกล้กำหนด':'ปกติ';
+      rows.push([m.name,m.code||'',item.task,freqLabel(item),formatDate(lastDone),formatDate(nextDue),st,diffDays]);
+    });
+  });
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  // Style header row width
+  ws['!cols']=[{wch:30},{wch:10},{wch:40},{wch:12},{wch:16},{wch:16},{wch:12},{wch:12}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'PM Summary');
+  XLSX.writeFile(wb,`PM_Summary_STBakery_${formatDateInput(today)}.xlsx`);
+  showToast('✓ Export Excel สรุปแล้ว');
+}
+
+function exportExcelToday(){
+  const rows=[['เครื่องจักร','รหัสเครื่อง','รายการ PM','ความถี่','กำหนดวันที่','เกินกำหนด(วัน)']];
+  let found=false;
+  machines.forEach(m=>{
+    pmItems.filter(i=>i.machineId===m.id).forEach(item=>{
+      const{nextDue,diffDays,status}=computeStatus(item);
+      if(status!=='overdue')return;
+      found=true;
+      rows.push([m.name,m.code||'-',item.task,freqLabel(item),formatDate(nextDue),Math.abs(diffDays)]);
+    });
+  });
+  if(!found){showToast('ไม่มีรายการงานค้าง (เกินกำหนด)');return;}
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:32},{wch:12},{wch:42},{wch:12},{wch:18},{wch:16}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'งานค้าง');
+  XLSX.writeFile(wb,`PM_งานค้าง_STBakery_${formatDateInput(today)}.xlsx`);
+  showToast('✓ Export Excel งานค้างแล้ว');
+}
+
+function exportMachineList(){
+  if(!machines.length){showToast('ยังไม่มีข้อมูลเครื่องจักร');return;}
+  const headers=['#','ชื่อเครื่องจักร','รหัส','ประเภท','จำนวนรายการ PM','สถานะล่าสุด'];
+  const rows=machines.map((m,i)=>{
+    const items=pmItems.filter(p=>p.machineId===m.id);
+    const statuses=items.map(p=>computeStatus(p).status);
+    const st=statuses.includes('overdue')?'🔴 มีงานเกินกำหนด':statuses.includes('soon')?'🟡 ใกล้กำหนด':'🟢 ปกติ';
+    return[i+1, m.name, m.code||'-', m.icon+' '+m.name.replace(m.name,'').trim()||'-', items.length, st];
+  });
+  // Re-map cleanly
+  const cleanRows=machines.map((m,i)=>{
+    const items=pmItems.filter(p=>p.machineId===m.id);
+    const statuses=items.map(p=>computeStatus(p).status);
+    const st=statuses.includes('overdue')?'มีงานเกินกำหนด':statuses.includes('soon')?'ใกล้กำหนด':'ปกติ';
+    return[i+1, m.name, m.code||'-', m.icon, items.length, st];
+  });
+  const ws=XLSX.utils.aoa_to_sheet([headers,...cleanRows]);
+  ws['!cols']=[{wch:5},{wch:44},{wch:14},{wch:10},{wch:18},{wch:22}];
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'เครื่องจักร');
+  XLSX.writeFile(wb,`เครื่องจักร_STBakery_${formatDateInput(today)}.xlsx`);
+  showToast('✓ ดาวน์โหลดข้อมูลเครื่องจักรแล้ว');
+}
+
+// ===== HISTORY =====
+function renderHistory(){
+  const mSel = document.getElementById('hist-filter-machine');
+  if(mSel){
+    const cur = mSel.value;
+    mSel.innerHTML = '<option value="">— ทุกเครื่อง —</option>' +
+      machines.map(m=>`<option value="${m.id}">${m.icon} ${m.name}</option>`).join('');
+    mSel.value = cur;
+  }
+  const monthFilter = document.getElementById('hist-filter-month')?.value;
+  const machineFilter = document.getElementById('hist-filter-machine')?.value;
+  let rows = pmHistory.filter(h=>{
+    const d = new Date(h.doneDate);
+    if(monthFilter!==''&&monthFilter!==undefined&&String(d.getMonth())!==String(monthFilter)) return false;
+    if(machineFilter && h.machineId!==machineFilter) return false;
+    return true;
+  });
+  const tbody = document.getElementById('historyBody');
+  const empty = document.getElementById('hist-empty');
+  if(!tbody) return;
+  if(!rows.length){
+    tbody.innerHTML='';
+    if(empty) empty.style.display='block';
+    return;
+  }
+  if(empty) empty.style.display='none';
+  tbody.innerHTML = rows.map(h=>`
+    <tr>
+      <td style="white-space:nowrap;font-family:'IBM Plex Mono',monospace;font-size:12px;">${formatDate(new Date(h.doneDate))}</td>
+      <td><span style="font-size:15px;margin-right:5px;">${h.machineIcon||'⚙️'}</span>${h.machineName}</td>
+      <td style="font-size:13px;">${h.task}</td>
+      <td style="font-size:13px;">${h.tech||'-'}</td>
+      <td style="font-size:12px;color:var(--text-mid);">${h.note||'-'}</td>
+    </tr>`).join('');
+}
+
+function exportHistoryExcel(){
+  const monthFilter = document.getElementById('hist-filter-month')?.value;
+  const machineFilter = document.getElementById('hist-filter-machine')?.value;
+  let rows = pmHistory.filter(h=>{
+    const d = new Date(h.doneDate);
+    if(monthFilter!==''&&monthFilter!==undefined&&String(d.getMonth())!==String(monthFilter)) return false;
+    if(machineFilter && h.machineId!==machineFilter) return false;
+    return true;
+  });
+  if(!rows.length){ showToast('ไม่มีข้อมูลในช่วงที่เลือก'); return; }
+  const MONTHS_FULL=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const monthLabel = (monthFilter!==''&&monthFilter!==undefined) ? MONTHS_FULL[+monthFilter] : 'ทั้งหมด';
+  const machineObj = machineFilter ? machines.find(m=>m.id===machineFilter) : null;
+  const machineLabel = machineObj ? machineObj.name : 'ทุกเครื่อง';
+  const headers = ['วันที่ทำ','เครื่องจักร','รายการ PM','ช่างผู้ทำ','หมายเหตุ/ปัญหาที่พบ'];
+  const data = rows.map(h=>[ formatDate(new Date(h.doneDate)), h.machineName, h.task, h.tech||'-', h.note||'-' ]);
+  const summary = [
+    [`สรุปประวัติ PM — ST Bakery`],
+    [`เดือน: ${monthLabel}  |  เครื่องจักร: ${machineLabel}  |  รวม: ${rows.length} รายการ`],
+    []
+  ];
+  const ws = XLSX.utils.aoa_to_sheet([...summary, headers, ...data]);
+  ws['!cols'] = [{wch:18},{wch:36},{wch:40},{wch:16},{wch:40}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, 'ประวัติ PM');
+  XLSX.writeFile(wb, `ประวัติPM_${monthLabel}_STBakery.xlsx`);
+  showToast('✓ Export Excel แล้ว');
+}
+
+// ===== QR CODE =====
+function generateQR(){
+  const url = document.getElementById('qr-url-input').value.trim();
+  if(!url){ showToast('กรุณาใส่ URL ก่อน'); return; }
+  const wrap = document.getElementById('qr-canvas-wrap');
+  wrap.innerHTML = '';
+  new QRCode(wrap, { text:url, width:220, height:220, colorDark:'#000000', colorLight:'#ffffff', correctLevel:QRCode.CorrectLevel.H });
+  document.getElementById('qr-output').style.display = 'block';
+  showToast('✓ สร้าง QR Code แล้ว');
+}
+
+function printQR(){
+  const wrap = document.getElementById('qr-canvas-wrap');
+  const img = wrap.querySelector('img') || wrap.querySelector('canvas');
+  const src = img instanceof HTMLCanvasElement ? img.toDataURL() : img?.src;
+  if(!src){ showToast('กรุณาสร้าง QR ก่อน'); return; }
+  const w = window.open('','_blank');
+  w.document.write(`<!DOCTYPE html><html><head><title>QR Code PM Dashboard</title>
+  <style>@import url('https://fonts.googleapis.com/css2?family=Sarabun:wght@400;600&display=swap');
+  body{margin:0;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;font-family:'Sarabun',sans-serif;background:#fff;}
+  img{width:260px;height:260px;border:8px solid #1a1a2e;border-radius:12px;}
+  h2{margin:16px 0 4px;font-size:22px;color:#1a1a2e;}p{color:#555;font-size:14px;margin:4px 0;}</style></head>
+  <body><img src="${src}"><h2>PM Dashboard</h2><p>S.T.Bakery</p><p style="font-size:12px;color:#aaa;margin-top:8px;">สแกน QR เพื่อเปิดบนมือถือ</p></body></html>`);
+  w.document.close();
+  setTimeout(()=>w.print(), 400);
+}
+
+function buildLinePMMessage(){
+  // หาเครื่องที่มีงาน PM ครบกำหนดวันนี้พอดี (diffDays === 0)
+  const todayMachines = [];
+  machines.forEach(m => {
+    const hasTodayPM = pmItems
+      .filter(i => i.machineId === m.id)
+      .some(item => {
+        const { diffDays, status } = computeStatus(item);
+        return diffDays === 0 && status === 'soon';
+      });
+    if (hasTodayPM) todayMachines.push(m);
+  });
+
+  const DAYS_TH = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+  const dayName = DAYS_TH[today.getDay()];
+  const ds = `วัน${dayName} ${today.getDate()} ${['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'][today.getMonth()]} ${today.getFullYear()+543}`;
+
+  if (!todayMachines.length) return null; // ไม่มีงานวันนี้ → ไม่ส่ง
+
+  let msg = `🔧 สรุป PM ประจำวัน — ST Bakery\n${ds}\n\n`;
+  msg += `⚠️ เครื่องที่ต้องทำ PM วันนี้\n`;
+  todayMachines.forEach(m => { msg += `- ${m.name}\n`; });
+  msg += `\n📋 ดูรายละเอียด: -`;
+  return msg;
+}
+
+function openLineModal(){
+  const msg = buildLinePMMessage();
+  const DAYS_TH = ['อาทิตย์','จันทร์','อังคาร','พุธ','พฤหัสบดี','ศุกร์','เสาร์'];
+  const dayName = DAYS_TH[today.getDay()];
+  const ds = `วัน${dayName} ${today.getDate()} ${['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'][today.getMonth()]} ${today.getFullYear()+543}`;
+
+  document.getElementById('lineModalBody').textContent = msg ||
+    `🔧 สรุป PM ประจำวัน — ST Bakery\n${ds}\n\n✅ ไม่มีงาน PM ที่ต้องทำวันนี้`;
+  document.getElementById('lineModal').classList.add('open');
+}
+
+function copyLineMsg(){
+  navigator.clipboard.writeText(document.getElementById('lineModalBody').textContent)
+    .then(()=>showToast('✓ Copy ข้อความแล้ว'));
+}
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+
+// ===== SETTINGS =====
+function setWarnPreset(n){
+  document.getElementById('warnDaysInput').value=n;
+  document.getElementById('preview-warn').textContent=n;
+  document.getElementById('preview-warn2').textContent=n;
+  document.querySelectorAll('#page-settings .filter-btn').forEach(b=>{
+    b.classList.toggle('active', b.textContent===n+' วัน');
+  });
+}
+
+function saveWarnDays(){
+  const v=parseInt(document.getElementById('warnDaysInput').value);
+  if(isNaN(v)||v<1){showToast('กรุณาระบุจำนวนวันที่ถูกต้อง');return;}
+  warnDays=v;
+  document.getElementById('current-warn-display').textContent=v+' วัน';
+  document.getElementById('soon-label').textContent=`🟡 ใกล้ถึงกำหนด (≤${v} วัน)`;
+  renderAll();renderReport();
+  showToast(`✓ บันทึกแล้ว — เตือนล่วงหน้า ${v} วัน`);
+}
+
+function openSettings(){
+  document.getElementById('warnDaysInput').value=warnDays;
+  document.getElementById('preview-warn').textContent=warnDays;
+  document.getElementById('preview-warn2').textContent=warnDays;
+  document.getElementById('current-warn-display').textContent=warnDays+' วัน';
+  document.getElementById('settings-machine-count').textContent=machines.length+' เครื่อง';
+  document.getElementById('settings-pm-count').textContent=pmItems.length+' รายการ';
+  document.querySelectorAll('#page-settings .filter-btn').forEach(b=>{
+    b.classList.toggle('active', b.textContent===warnDays+' วัน');
+  });
+}
+
+// ===== NAV =====
+function switchPage(page,tab){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  tab.classList.add('active');
+  if(page==='machines')renderMachineList();
+  if(page==='pmitems'){refreshSelects();renderPMList();}
+  if(page==='report')renderReport();
+  if(page==='settings')openSettings();
+}
+
+// ===== TOAST =====
+function showToast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),3500);
+}
+
+// ===== WORK ORDER PRINT =====
+let _woDocNum = 1;
+function printWorkOrder(){
+  const ov=[],sn=[];
+  machines.forEach(m=>{
+    pmItems.filter(i=>i.machineId===m.id).forEach(item=>{
+      const{status,diffDays,nextDue,lastDone}=computeStatus(item);
+      if(status==='overdue')ov.push({m,item,diffDays,nextDue,lastDone,status});
+      else if(status==='soon')sn.push({m,item,diffDays,nextDue,lastDone,status});
+    });
+  });
+
+  const all=[...ov,...sn];
+  if(!all.length){showToast('ไม่มีรายการ PM ที่ต้องแจ้งวันนี้');return;}
+
+  const docNum=`WO-${today.getFullYear()}-${String(today.getMonth()+1).padStart(2,'0')}${String(today.getDate()).padStart(2,'0')}-${String(_woDocNum++).padStart(3,'0')}`;
+  const ds=formatDate(today);
+
+  // Group by machine
+  const grouped={};
+  all.forEach(r=>{
+    if(!grouped[r.m.id])grouped[r.m.id]={m:r.m,rows:[]};
+    grouped[r.m.id].rows.push(r);
+  });
+
+  let tableRows='';
+  let seq=1;
+  Object.values(grouped).forEach(({m,rows})=>{
+    tableRows+=`<tr><td colspan="7" style="background:#f0f2ff;font-weight:700;font-size:12px;padding:6px 10px;border-bottom:1px solid #c5cbf5;">${m.icon} ${m.name} (${m.code||'-'})</td></tr>`;
+    rows.forEach(r=>{
+      const chipCls=r.status==='overdue'?'wo-chip-red':'wo-chip-yellow';
+      const chipTxt=r.status==='overdue'?`เกิน ${Math.abs(r.diffDays)} วัน`:`อีก ${r.diffDays} วัน`;
+      tableRows+=`
+        <tr>
+          <td style="text-align:center;font-weight:700;">${seq++}</td>
+          <td>${r.item.task}<br><span style="font-size:10px;color:#888;">${r.item.techNote||''}</span></td>
+          <td style="text-align:center;"><span class="wo-status-chip ${chipCls}">${chipTxt}</span></td>
+          <td style="text-align:center;font-size:11px;">${formatDate(r.nextDue)}</td>
+          <td><div class="wo-result-box">□ ดำเนินการแล้ว &nbsp;&nbsp; □ เลื่อน</div></td>
+          <td><div class="wo-result-box" style="min-height:28px;"></div></td>
+          <td><div class="wo-result-box" style="min-height:28px;"></div></td>
+        </tr>`;
+    });
+  });
+
+  const html=`<div class="wo-paper">
+    <!-- HEADER -->
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2.5px solid #1a1a2e;padding-bottom:10px;margin-bottom:14px;">
+      <div class="wo-company-name">S.T.Bakery Co., Ltd.</div>
+      <div style="text-align:right;">
+        <div class="wo-doc-title">ใบงานซ่อมบำรุงประจำวัน</div>
+        <div class="wo-doc-date" style="margin-top:3px;">วันที่: ${ds}</div>
+      </div>
+    </div>
+
+    <!-- TABLE -->
+    <div class="wo-section-title">รายการงานที่ต้องดำเนินการ</div>
+    <table class="wo-table">
+      <thead>
+        <tr>
+          <th style="width:32px;">#</th>
+          <th>รายการ PM / ข้อควรระวัง</th>
+          <th style="width:90px;text-align:center;">สถานะ</th>
+          <th style="width:80px;text-align:center;">กำหนด</th>
+          <th style="width:110px;">ผลการดำเนินการ</th>
+          <th style="width:80px;">วันที่ทำจริง</th>
+          <th style="width:70px;">เซ็นชื่อช่าง</th>
+        </tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+
+    <!-- NOTE -->
+    <div style="margin-top:14px;">
+      <div class="wo-note-label">หมายเหตุ / ปัญหาที่พบ / อะไหล่ที่ใช้</div>
+      <div class="wo-note-box"></div>
+    </div>
+
+    <!-- SIGNATURES -->
+    <div class="wo-sign-grid">
+      <div class="wo-sign-box">
+        <div class="wo-sign-label">ผู้รับงาน (ช่าง)</div>
+        <div class="wo-sign-line"></div>
+        <div class="wo-sign-name">ชื่อ .......................................</div>
+        <div class="wo-sign-date">วันที่ ....................</div>
+      </div>
+      <div class="wo-sign-box">
+        <div class="wo-sign-label">ผู้ตรวจสอบ (Supervisor)</div>
+        <div class="wo-sign-line"></div>
+        <div class="wo-sign-name">ชื่อ .......................................</div>
+        <div class="wo-sign-date">วันที่ ....................</div>
+      </div>
+      <div class="wo-sign-box">
+        <div class="wo-sign-label">หัวหน้า / ผู้อนุมัติ</div>
+        <div class="wo-sign-line"></div>
+        <div class="wo-sign-name">ชื่อ .......................................</div>
+        <div class="wo-sign-date">วันที่ ....................</div>
+      </div>
+    </div>
+
+    <!-- FOOTER -->
+    <div class="wo-footer">
+      <span>ระบบ PM อัตโนมัติ S.T.Bakery &nbsp;|&nbsp; พิมพ์วันที่ ${ds}</span>
+      <span>เอกสารเลขที่ ${docNum} &nbsp;|&nbsp; หน้า 1/1</span>
+    </div>
+  </div>`;
+
+  document.getElementById('woPrintArea').innerHTML=html;
+  setTimeout(()=>window.print(),100);
+}
+
+function toggleFreqCustom(sel){
+  document.getElementById('pm-freq-custom').style.display=sel.value==='custom'?'block':'none';
+}
+
+function toggleEditFreqCustom(sel){
+  document.getElementById('edit-freq-custom').style.display=sel.value==='custom'?'block':'none';
+}
+
+function toggleSchedType(sel,prefix){
+  const isMonthly=sel.value==='monthly';
+  if(prefix==='add'){
+    document.getElementById('add-interval-group').style.display=isMonthly?'none':'block';
+    document.getElementById('add-monthly-group').style.display=isMonthly?'block':'none';
+  } else {
+    document.getElementById('edit-interval-group').style.display=isMonthly?'none':'block';
+    document.getElementById('edit-monthly-group').style.display=isMonthly?'block':'none';
+  }
+}
+
+function getFreqValue(){
+  const schedType=document.getElementById('pm-sched-type').value;
+  if(schedType==='monthly'){
+    const day=parseInt(document.getElementById('pm-month-day').value);
+    const interval=parseInt(document.getElementById('pm-month-interval').value)||1;
+    if(!day||day<1||day>31){return null;}
+    return {scheduleType:'monthly',monthDay:day,monthInterval:interval};
+  }
+  const sel=document.getElementById('pm-freq');
+  if(sel.value==='custom'){
+    const v=parseInt(document.getElementById('pm-freq-custom').value);
+    return isNaN(v)||v<1?null:{scheduleType:'interval',freq:v};
+  }
+  return {scheduleType:'interval',freq:parseInt(sel.value)};
+}
+
+function importPMFromExcel(input){
+  const file=input.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=e=>{
+    const wb=XLSX.read(e.target.result,{type:'binary'});
+    const ws=wb.Sheets[wb.SheetNames[0]];
+    const rows=XLSX.utils.sheet_to_json(ws,{header:1});
+    let added=0,skipped=0,invalid=0;
+    rows.slice(1).forEach(r=>{
+      if(!r[0]||!r[1])return;
+      const machineCode=String(r[0]).trim();
+      const machine=machines.find(m=>m.code===machineCode||m.name===machineCode);
+      if(!machine){skipped++;return;}
+
+      // col[2] = รูปแบบ: "interval" หรือ "monthly" (ถ้าว่างถือว่า interval)
+      const schedType=String(r[2]||'interval').trim().toLowerCase();
+      // col[3] = ความถี่(วัน) หรือ วันที่ในเดือน
+      // col[4] = ทุก N เดือน (สำหรับ monthly เท่านั้น)
+      // col[5] = วันทำล่าสุด (YYYY-MM-DD)
+      // col[6] = หมายเหตุ
+      // col[7] = ชื่อช่าง
+      // col[8] = เตือนล่วงหน้า(วัน)
+
+      let lastDone=daysAgo(0);
+      const lastDoneStr=String(r[5]||'').trim();
+      if(lastDoneStr){const p=lastDoneStr.split('-');if(p.length===3)lastDone=new Date(+p[0],+p[1]-1,+p[2]);}
+
+      const techNote=String(r[6]||'');
+      const technician=String(r[7]||'')||null;
+      const warnDays=parseInt(r[8])||null;
+
+      let schedFields;
+      if(schedType==='monthly'){
+        const monthDay=parseInt(r[3]);
+        const monthInterval=parseInt(r[4])||1;
+        if(!monthDay||monthDay<1||monthDay>31){invalid++;return;}
+        schedFields={scheduleType:'monthly',monthDay,monthInterval};
+      } else {
+        const freq=parseInt(r[3])||365;
+        schedFields={scheduleType:'interval',freq};
+      }
+
+      pmItems.push({id:genId(),machineId:machine.id,task:String(r[1]),lastDone,techNote,technician,warnDays,...schedFields});
+      added++;
+    });
+    renderPMList();renderAll();renderReport();
+    let msg=`✓ นำเข้า PM ${added} รายการ`;
+    if(skipped) msg+=` (ข้าม ${skipped} หาเครื่องไม่พบ)`;
+    if(invalid) msg+=` (ข้าม ${invalid} ข้อมูลไม่ถูกต้อง)`;
+    showToast(msg);
+  };
+  reader.readAsBinaryString(file);
+  input.value='';
+  document.getElementById('pmDropZone')?.classList.remove('drag');
+}
+
+function dropPMExcel(e){
+  e.preventDefault();
+  document.getElementById('pmDropZone').classList.remove('drag');
+  const file=e.dataTransfer.files[0];if(!file)return;
+  importPMFromExcel({files:[file]});
+}
+
+function downloadPMTemplate(){
+  const headers=['รหัสเครื่อง (หรือชื่อเครื่อง)','รายการ PM','รูปแบบ (interval/monthly)','ความถี่(วัน) หรือ วันที่ในเดือน(1-31)','ทุก N เดือน (monthly เท่านั้น)','วันทำล่าสุด (YYYY-MM-DD)','หมายเหตุ','ชื่อช่าง','เตือนล่วงหน้า(วัน)'];
+  const examples=[
+    ['SILO-01','ตรวจสอบซีลฝาครอบ','interval',365,'','2025-01-15','ทุก 1 ปี','นายสมชาย',''],
+    ['CB-01','หล่อลื่น Bearing','interval',90,'','2025-10-01','ทุก 3 เดือน','ทีมช่าง A',30],
+    ['RH-01','ทำความสะอาดตัวกรอง','monthly',1,1,'2025-02-01','ทุกวันที่ 1 ของเดือน','นายสมชาย',7],
+    ['AW-02','สอบเทียบเครื่องชั่ง','monthly',1,3,'2025-01-01','ทุกวันที่ 1 ทุก 3 เดือน','ทีมช่าง B',14],
+  ];
+  const ws=XLSX.utils.aoa_to_sheet([headers,...examples]);
+  ws['!cols']=[{wch:28},{wch:36},{wch:22},{wch:28},{wch:22},{wch:24},{wch:30},{wch:18},{wch:18}];
+  // Freeze header row
+  ws['!freeze']={xSplit:0,ySplit:1};
+  const wb=XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb,ws,'PM Items');
+  // Add instruction sheet
+  const wsInfo=XLSX.utils.aoa_to_sheet([
+    ['คำอธิบายคอลัมน์ Template PM Items'],
+    [''],
+    ['คอลัมน์','คำอธิบาย','ตัวอย่าง'],
+    ['รหัสเครื่อง','รหัสหรือชื่อเครื่องจักรที่ลงทะเบียนไว้แล้ว','SILO-01'],
+    ['รายการ PM','ชื่องานที่ต้องทำ','ตรวจสอบซีลฝาครอบ'],
+    ['รูปแบบ','interval = นับแบบวัน | monthly = ตามวันที่ในเดือน','interval'],
+    ['ความถี่/วันที่','interval: จำนวนวัน | monthly: วันที่ในเดือน (1-31)','365 หรือ 1'],
+    ['ทุก N เดือน','เฉพาะ monthly: ทุกกี่เดือน (1=ทุกเดือน, 3=ทุกไตรมาส)','1'],
+    ['วันทำล่าสุด','รูปแบบ YYYY-MM-DD (ปี ค.ศ.)','2025-01-15'],
+    ['หมายเหตุ','คำแนะนำหรือข้อสังเกต','ช่างใส่อุปกรณ์เซฟตี้'],
+    ['ชื่อช่าง','ชื่อช่างหรือทีมที่รับผิดชอบ','นายสมชาย'],
+    ['เตือนล่วงหน้า','จำนวนวันที่ต้องการเตือน (เว้นว่างใช้ค่าตั้งต้นของระบบ)','14'],
+  ]);
+  wsInfo['!cols']=[{wch:22},{wch:50},{wch:30}];
+  XLSX.utils.book_append_sheet(wb,wsInfo,'คำอธิบาย');
+  XLSX.writeFile(wb,'template_pm_items.xlsx');
+  showToast('✓ ดาวน์โหลด Template แล้ว');
+}
+
+// ===== THEME =====
+let isDark = true;
+function toggleTheme(){
+  isDark = !isDark;
+  applyTheme();
+}
+function setTheme(mode){
+  isDark = mode==='dark';
+  applyTheme();
+}
+function applyTheme(){
+  document.body.classList.toggle('light-mode', !isDark);
+  const btn = document.getElementById('themeBtn');
+  if(btn) btn.textContent = isDark ? '🌙 โหมดมืด' : '☀️ โหมดสว่าง';
+  // highlight active button in settings
+  const db=document.getElementById('darkBtn');
+  const lb=document.getElementById('lightBtn');
+  if(db&&lb){
+    db.style.borderColor=isDark?'var(--accent)':'var(--border)';
+    db.style.color=isDark?'var(--accent)':'var(--text-mid)';
+    lb.style.borderColor=!isDark?'var(--accent)':'var(--border)';
+    lb.style.color=!isDark?'var(--accent)':'var(--text-mid)';
+  }
+}
+
+function editItemWarn(id){
+  const item=pmItems.find(i=>i.id===id);
+  if(!item)return;
+  const cur=item.warnDays||'';
+  const v=prompt(`ตั้งค่าเตือนล่วงหน้าสำหรับ:\n"${item.task}"\n\nใส่จำนวนวัน (เว้นว่างเพื่อใช้ค่าตั้งต้นของระบบ ${warnDays} วัน):`, cur);
+  if(v===null)return; // cancelled
+  const n=parseInt(v);
+  item.warnDays=(v.trim()===''||isNaN(n)||n<1)?null:n;
+  renderPMList();renderAll();renderReport();
+  showToast(item.warnDays?`✓ ตั้งค่าเตือนล่วงหน้า ${item.warnDays} วัน`:`✓ ใช้ค่าตั้งต้นของระบบ (${warnDays} วัน)`);
+}
+
+function showPdfSection(){
+  const s=document.getElementById('pdfSection');
+  s.style.display=s.style.display==='none'?'block':'none';
+  if(s.style.display==='block'){
+    // Set default to today
+    document.getElementById('pdfDay').value=today.getDate();
+    document.getElementById('pdfMonth').value=today.getMonth()+1;
+    document.getElementById('pdfYear').value=today.getFullYear()+543;
+  }
+}
+
+// ===== PDF WORK ORDER =====
+let _pdfHtmlCache = '';
+
+function computeStatusForDate(item, refDate) {
+  const lastDone = doneDates[item.id] || item.lastDone;
+  let nextDue;
+  if(item.scheduleType==='monthly'){
+    // temporarily override doneDates lookup with lastDone for date-based calc
+    const orig=doneDates[item.id];
+    doneDates[item.id]=lastDone;
+    nextDue=computeNextMonthlyDue(item,refDate);
+    if(orig===undefined) delete doneDates[item.id]; else doneDates[item.id]=orig;
+  } else {
+    nextDue = addDays(lastDone, item.freq);
+  }
+  const diffDays = Math.ceil((nextDue - refDate) / 86400000);
+  const itemWarn=(item.warnDays&&item.warnDays>0)?item.warnDays:warnDays;
+  const status = diffDays <= 0 ? 'overdue' : diffDays <= itemWarn ? 'soon' : 'ok';
+  return { nextDue, diffDays, status, lastDone };
+}
+
+function openPdfModal() {
+  const day=parseInt(document.getElementById('pdfDay').value);
+  const month=parseInt(document.getElementById('pdfMonth').value);
+  const yearBE=parseInt(document.getElementById('pdfYear').value);
+  if(!day||!month||!yearBE){showToast('กรุณากรอกวัน เดือน ปี ให้ครบ');return;}
+  const yearCE=yearBE-543;
+  const refDate=new Date(yearCE,month-1,day);
+  refDate.setHours(0,0,0,0);
+
+  // เฉพาะงานที่ nextDue ตรงกับวันที่เลือกพอดี
+  const targetRows=[];
+  machines.forEach(m=>{
+    pmItems.filter(i=>i.machineId===m.id).forEach(item=>{
+      const s=computeStatusForDate(item,refDate);
+      // nextDue ต้องตรงกับ refDate พอดี (diffDays === 0)
+      if(s.diffDays!==0)return;
+      targetRows.push({m,item,...s});
+    });
+  });
+
+  if(!targetRows.length){showToast('ไม่มีรายการ PM ที่ครบกำหนดพอดีในวันที่เลือก');return;}
+
+  const MONTH_TH_FULL=['มกราคม','กุมภาพันธ์','มีนาคม','เมษายน','พฤษภาคม','มิถุนายน','กรกฎาคม','สิงหาคม','กันยายน','ตุลาคม','พฤศจิกายน','ธันวาคม'];
+  const ds=`${day} ${MONTH_TH_FULL[month-1]} ${yearBE}`;
+  const docNum=`WO-${yearCE}-${String(month).padStart(2,'0')}${String(day).padStart(2,'0')}`;
+
+  const grouped={};
+  targetRows.forEach(r=>{
+    if(!grouped[r.m.id])grouped[r.m.id]={m:r.m,rows:[]};
+    grouped[r.m.id].rows.push(r);
+  });
+
+  let tableRows='';let seq=1;
+  Object.values(grouped).forEach(({m,rows})=>{
+    tableRows+=`<tr><td colspan="4" style="background:#f0f2ff;font-weight:700;font-size:12px;padding:6px 10px;border-bottom:1px solid #c5cbf5;color:#1a1a2e;">${m.icon} ${m.name}${m.code?' ('+m.code+')':''}</td></tr>`;
+    rows.forEach(r=>{
+      const techName=r.item.technician||'';
+      tableRows+=`<tr style="${seq%2===0?'background:#fafafa;':''}">
+        <td style="padding:10px;font-weight:500;">${r.item.task}${r.item.techNote?`<br><span style="font-size:10px;color:#888;">${r.item.techNote}</span>`:''}</td>
+        <td style="text-align:center;font-size:18px;padding:10px;">☐</td>
+        <td style="padding:6px 10px;min-width:160px;">&nbsp;</td>
+      </tr>`;
+      seq++;
+    });
+  });
+
+  // Collect unique technician names for signature area
+  const techs=[...new Set(targetRows.map(r=>r.item.technician).filter(Boolean))];
+  const signBlock=techs.length
+    ? techs.map(t=>`<div style="text-align:center;min-width:180px;">
+        <div style="font-size:12px;color:#777;margin-bottom:6px;">ลงชื่อช่างผู้ดำเนินการ</div>
+        <div style="border-bottom:1.5px solid #333;margin:32px 0 6px;"></div>
+        <div style="font-size:12px;color:#333;font-weight:600;">( ${t} )</div>
+        <div style="font-size:11px;color:#888;margin-top:4px;">วันที่ ........../........../............</div>
+      </div>`).join('')
+    : `<div style="text-align:center;min-width:180px;">
+        <div style="font-size:12px;color:#777;margin-bottom:6px;">ลงชื่อช่างผู้ดำเนินการ</div>
+        <div style="border-bottom:1.5px solid #333;margin:32px 0 6px;"></div>
+        <div style="font-size:11px;color:#555;">( .................................................. )</div>
+        <div style="font-size:11px;color:#888;margin-top:4px;">วันที่ ........../........../............</div>
+      </div>`;
+
+  const html=`<div style="font-family:'Sarabun',sans-serif;color:#000;font-size:13px;line-height:1.6;">
+    <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:2.5px solid #1a1a2e;padding-bottom:10px;margin-bottom:16px;">
+      <div style="font-size:20px;font-weight:800;color:#1a1a2e;">S.T.Bakery Co., Ltd.</div>
+      <div style="text-align:right;">
+        <div style="font-size:15px;font-weight:700;">ใบงานซ่อมบำรุงประจำวัน</div>
+        <div style="font-size:12px;color:#555;margin-top:2px;">วันที่: ${ds}</div>
+      </div>
+    </div>
+    <table style="width:100%;border-collapse:collapse;font-size:12px;">
+      <thead>
+        <tr style="background:#1a1a2e;color:#fff;">
+          <th style="padding:9px 12px;text-align:left;">รายการ PM / หมายเหตุ</th>
+          <th style="padding:9px 10px;width:80px;text-align:center;">ดำเนินการ</th>
+          <th style="padding:9px 12px;width:180px;text-align:left;">หมายเหตุ</th>
+        </tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+    <div style="margin-top:28px;padding-top:16px;border-top:2px solid #eee;display:flex;justify-content:flex-start;gap:40px;flex-wrap:wrap;">
+      ${signBlock}
+    </div>
+    <div style="margin-top:16px;padding-top:8px;border-top:1px solid #ddd;display:flex;justify-content:space-between;font-size:10px;color:#aaa;">
+      <span>ระบบ PM อัตโนมัติ S.T.Bakery | พิมพ์: ${formatDate(today)}</span>
+      <span>${docNum} | หน้า 1/1</span>
+    </div>
+  </div>`;
+
+  _pdfHtmlCache=html;
+  document.getElementById('pdfPreviewContent').innerHTML=html;
+  document.getElementById('pdfModalDateLabel').textContent=ds;
+  document.getElementById('pdfModal').classList.add('open');
+}
+
+function doPrintPDF(){
+  document.getElementById('woPrintArea').innerHTML=`<div class="wo-paper">${_pdfHtmlCache}</div>`;
+  closeModal('pdfModal');
+  setTimeout(()=>window.print(),150);
+}
+
+// ===== FIREBASE INIT & SYNC =====
+let db = null;
+let _fbReady = false;
+
+function setSyncStatus(state) {
+  const dot  = document.getElementById('syncDot');
+  const text = document.getElementById('syncText');
+  if (!dot || !text) return;
+  const map = {
+    connecting: { icon:'⏳', label:'กำลังเชื่อมต่อ...', color:'var(--text-dim)' },
+    online:     { icon:'🟢', label:'ซิงค์แล้ว',          color:'var(--green)' },
+    saving:     { icon:'🔄', label:'กำลังบันทึก...',      color:'var(--yellow)' },
+    offline:    { icon:'🔴', label:'ไม่ได้เชื่อมต่อ',    color:'var(--red)' },
+  };
+  const s = map[state] || map.connecting;
+  dot.textContent  = s.icon;
+  text.textContent = s.label;
+  text.style.color = s.color;
+}
+
+// serialize Date → ISO string, revive back to Date
+function serializeItem(obj) {
+  const o = {...obj};
+  if (o.lastDone instanceof Date) o.lastDone = o.lastDone.toISOString();
+  return o;
+}
+function reviveItem(o) {
+  const obj = {...o};
+  if (typeof obj.lastDone === 'string') obj.lastDone = new Date(obj.lastDone);
+  return obj;
+}
+
+// ---- SAVE helpers ----
+async function fbSaveMachine(m) {
+  if (!db) return;
+  setSyncStatus('saving');
+  try {
+    await db.collection('pm_machines').doc(m.id).set(serializeItem(m));
+    setSyncStatus('online');
+  } catch(e) { console.error(e); setSyncStatus('offline'); }
+}
+
+async function fbDeleteMachine(id) {
+  if (!db) return;
+  setSyncStatus('saving');
+  try {
+    await db.collection('pm_machines').doc(id).delete();
+    setSyncStatus('online');
+  } catch(e) { console.error(e); setSyncStatus('offline'); }
+}
+
+async function fbSavePMItem(item) {
+  if (!db) return;
+  setSyncStatus('saving');
+  try {
+    await db.collection('pm_items').doc(item.id).set(serializeItem(item));
+    setSyncStatus('online');
+  } catch(e) { console.error(e); setSyncStatus('offline'); }
+}
+
+async function fbDeletePMItem(id) {
+  if (!db) return;
+  setSyncStatus('saving');
+  try {
+    await db.collection('pm_items').doc(id).delete();
+    setSyncStatus('online');
+  } catch(e) { console.error(e); setSyncStatus('offline'); }
+}
+
+async function fbSaveDoneDate(itemId, dateISO) {
+  if (!db) return;
+  try {
+    await db.collection('pm_done_dates').doc(itemId).set({ date: dateISO });
+  } catch(e) { console.error(e); }
+}
+
+async function fbDeleteDoneDate(itemId) {
+  if (!db) return;
+  try {
+    await db.collection('pm_done_dates').doc(itemId).delete();
+  } catch(e) { console.error(e); }
+}
+
+async function fbSaveHistory(entry) {
+  if (!db) return;
+  try {
+    await db.collection('pm_history').doc(entry.id).set(entry);
+  } catch(e) { console.error(e); }
+}
+
+// ---- REALTIME LISTENERS ----
+function startFirebaseListeners() {
+  // Machines
+  db.collection('pm_machines').onSnapshot(snap => {
+    machines = snap.docs.map(d => ({ ...d.data() }));
+    renderMachineList(); renderAll(); renderReport();
+  }, err => { console.error('machines listener:', err); setSyncStatus('offline'); });
+
+  // PM Items
+  db.collection('pm_items').onSnapshot(snap => {
+    pmItems = snap.docs.map(d => reviveItem(d.data()));
+    renderPMList(); renderAll(); renderReport();
+  }, err => { console.error('pmItems listener:', err); setSyncStatus('offline'); });
+
+  // Done dates
+  db.collection('pm_done_dates').onSnapshot(snap => {
+    doneDates = {};
+    snap.docs.forEach(d => { doneDates[d.id] = new Date(d.data().date); });
+    renderAll(); renderReport();
+  }, err => { console.error('doneDates listener:', err); });
+
+  // PM History
+  db.collection('pm_history').orderBy('doneDate','desc').onSnapshot(snap => {
+    pmHistory = snap.docs.map(d => d.data());
+    renderHistory();
+  }, err => { console.error('history listener:', err); });
+
+  setSyncStatus('online');
+}
+
+document.getElementById('todayTag').textContent=`${today.getDate()} ${MONTHS_TH[today.getMonth()]} ${today.getFullYear()+543}`;
+const _ld=document.getElementById('pm-lastdone-day');
+const _lm=document.getElementById('pm-lastdone-month');
+const _ly=document.getElementById('pm-lastdone-year');
+if(_ld)_ld.value=today.getDate();
+if(_lm)_lm.value=today.getMonth()+1;
+if(_ly)_ly.value=today.getFullYear()+543;
+applyTheme();
+
+// Start Firebase
+try {
+  if (FIREBASE_CONFIG.apiKey && FIREBASE_CONFIG.apiKey !== 'YOUR_API_KEY') {
+    firebase.initializeApp(FIREBASE_CONFIG);
+    db = firebase.firestore();
+    // ปิด mock data แล้วใช้ Firestore แทน
+    machines = [];
+    pmItems  = [];
+    doneDates= {};
+    pmHistory= [];
+    startFirebaseListeners();
+  } else {
+    // ยังไม่ได้ใส่ config — ใช้ mock data ปกติ
+    setSyncStatus('offline');
+    renderAll();
+    renderMachineList();
+    renderHistory();
+    console.warn('Firebase config ยังไม่ได้ตั้งค่า — ใช้ข้อมูล mock data แทน');
+  }
+} catch(e) {
+  console.error('Firebase init error:', e);
+  setSyncStatus('offline');
+  renderAll();
+  renderHistory();
+}
+</script>
+</body>
+</html>
